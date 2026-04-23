@@ -1,6 +1,6 @@
 // src/lib/mappers/applicant.mapper.ts
 
-import { Applicant, ApplicantStatus } from "@/src/types/applicant";
+import { Applicant, ApplicantStatus } from "@/types/applicant";
 
 
 
