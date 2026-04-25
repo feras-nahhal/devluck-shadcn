@@ -24,6 +24,7 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { AssessmentItem } from "@/types/assessment";
 import { toast } from "sonner";
+import SyncLoader from "react-spinners/SyncLoader";
 
 
 type TabMode = "all" | "public" | "private";
@@ -249,6 +250,18 @@ export default function StudentAssessmentsPage() {
   return { pending, done };
 }, [items]);
 
+  const formatValue = (val: number) => {
+    if (loading) {
+      return <SyncLoader size={8} color="#D4AF37" />;
+    }
+
+    return (
+      <span className={val === 0 ? "text-muted-foreground" : ""}>
+        {val}
+      </span>
+    );
+  };
+
   return (
     <DashboardLayout>
       <div className="px-4 sm:px-6 lg:px-6 py-6 space-y-8">
@@ -284,30 +297,30 @@ export default function StudentAssessmentsPage() {
                 : [
                     {
                       title: "Total",
-                      value: items.length,
+                      value: formatValue(items.length),
                       subtitle: "All assessments",
                       icon: <FileCheck className="h-5 w-5" />,
                       color: "#3B82F6",
                     },
                     {
                       title: "Pending",
-                      value: grouped.pending.length,
+                      value: formatValue(grouped.pending.length),
                       subtitle: "Need action",
                       icon: <Clock3 className="h-5 w-5" />,
                       color: "#F59E0B",
                     },
                     {
                       title: "Completed",
-                      value: grouped.done.length,
+                      value: formatValue(grouped.done.length),
                       subtitle: "Finished tests",
                       icon: <CheckCircle2 className="h-5 w-5" />,
                       color: "#10B981",
                     },
                     {
                       title: "Private Invites",
-                      value: items.filter(
-                        (x) => x.source === "private"
-                      ).length,
+                      value: formatValue(
+                        items.filter((x) => x.source === "private").length
+                      ),
                       subtitle: "Exclusive access",
                       icon: <Lock className="h-5 w-5" />,
                       color: "#8B5CF6",

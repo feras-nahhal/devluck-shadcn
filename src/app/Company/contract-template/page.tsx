@@ -321,23 +321,30 @@ export default function ContractTemplatePage() {
   /* ───────── STATS UI ───────── */
 
     const templateStats = useMemo(() => {
+      const formatValue = (val: number) =>
+        statsLoading ? (
+          <SyncLoader size={8} color="#D4AF37" />
+        ) : (
+          <span style={{ color: val === 0 ? "gray" : "inherit" }}>
+            {val.toString()}
+          </span>
+        );
 
       return [
   {
     title: "Total Templates",
-    value: stats.total,
+    value: formatValue(stats.total),
     subtitle: statsLoading
       ? "Loading..."
       : stats.latest
       ? `Last: ${formatDate(stats.latest)}`
       : "No templates yet",
-    icon: <FileText className="w-5 h-5 text-primary " />,
-    color: "text-primary",
+    icon: <FileText className="w-5 h-5 text-primary" />,
   },
 
   {
     title: "Active",
-    value: stats.active,
+    value: formatValue(stats.active),
     subtitle: statsLoading
       ? "Loading..."
       : stats.latestActive
@@ -345,13 +352,12 @@ export default function ContractTemplatePage() {
       : stats.active > 0
       ? "No date available"
       : "No active templates",
-    icon: <PlayCircle className="w-5 h-5 text-emerald-500 " />,
-    color: "text-emerald-500",
+    icon: <PlayCircle className="w-5 h-5 text-emerald-500" />,
   },
 
   {
     title: "Inactive",
-    value: stats.inactive,
+    value: formatValue(stats.inactive),
     subtitle: statsLoading
       ? "Loading..."
       : stats.latestInactive
@@ -359,13 +365,12 @@ export default function ContractTemplatePage() {
       : stats.inactive > 0
       ? "No date available"
       : "No inactive templates",
-    icon: <PauseCircle className="w-5 h-5 text-red-500 " />,
-    color: "text-red-500",
+    icon: <PauseCircle className="w-5 h-5 text-red-500" />,
   },
 
   {
     title: "Draft (Pending)",
-    value: stats.draft,
+    value: formatValue(stats.draft),
     subtitle: statsLoading
       ? "Loading..."
       : stats.latestDraft
@@ -373,8 +378,7 @@ export default function ContractTemplatePage() {
       : stats.draft > 0
       ? "No date available"
       : "No draft templates",
-    icon: <Clock className="w-5 h-5 text-amber-500 " />,
-    color: "text-amber-500",
+    icon: <Clock className="w-5 h-5 text-amber-500" />,
   },
 ];
     }, [stats, statsLoading]);
@@ -450,7 +454,6 @@ export default function ContractTemplatePage() {
                       value={stat.value}
                       subtitle={stat.subtitle}
                       icon={stat.icon}
-                      iconColor={stat.color}
                     />
                   </motion.div>
                 ))}

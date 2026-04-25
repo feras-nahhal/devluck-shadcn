@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Mail, Fingerprint, Eye, Trophy, HomeIcon } from "lucide-react";
 import { InfoItem } from "../common/info-item";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 
 
@@ -27,9 +28,10 @@ type PaymnetCardProps = {
     status?: string;
     studentImage?: string;
   };
+  onClick?: () => void;
 };
 
-export function PaymnetCard({ contract }: PaymnetCardProps) {
+export function PaymnetCard({ contract,onClick }: PaymnetCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -73,14 +75,17 @@ export function PaymnetCard({ contract }: PaymnetCardProps) {
             </Badge>
           </div>
 
-          {/* IMAGE */}
-          <div className="h-50 w-50 rounded-full mt-6 overflow-hidden border shadow-md bg-background">
-            <img
-              src={contract.studentImage || "https://avatar.vercel.sh/user"}
+          {/* AVATAR */}
+          <Avatar className="h-50 w-50 ring-2 ring-background shadow-sm mt-6">
+            <AvatarImage
+              src={contract.studentImage || undefined}
               alt={contract.name}
-              className="h-full w-full object-cover"
+              className="object-cover"
             />
-          </div>
+            <AvatarFallback className="bg-primary/10 text-primary font-bold text-xl">
+              {contract.name?.charAt(0)?.toUpperCase() || "U"}
+            </AvatarFallback>
+          </Avatar>
         </div>
 
         {/* HEADER */}
@@ -122,6 +127,17 @@ export function PaymnetCard({ contract }: PaymnetCardProps) {
           </div>
 
         </CardHeader>
+
+                {/* FOOTER */}
+        <CardFooter className="p-0 pt-0">
+          <Button
+            onClick={onClick}
+            className="w-full gap-2"
+          >
+            <Eye className="h-4 w-4" />
+            View Payment
+          </Button>
+        </CardFooter>
 
       </Card>
     </motion.div>

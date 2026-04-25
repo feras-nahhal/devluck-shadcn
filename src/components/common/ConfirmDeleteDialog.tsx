@@ -32,7 +32,7 @@ export function ConfirmDeleteDialog({
 }: ConfirmDeleteDialogProps) {
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-[400px] gap-0 overflow-hidden rounded-[28px] border-border bg-card p-0 shadow-2xl">
+      <AlertDialogContent className="w-[calc(100%-32px)] max-w-[400px] gap-0 overflow-hidden rounded-[28px] border-border bg-card p-0 shadow-2xl">
         <AlertDialogHeader className="flex flex-col items-center justify-center px-8 pb-8 pt-10">
           
           {/* ICON CONTAINER: Using OKLCH Destructive with Opacity */}

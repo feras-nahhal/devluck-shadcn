@@ -409,6 +409,9 @@ return (
                 status: contract.status,
                 studentImage: (contract as any).student?.image,
               }}
+              onClick={() =>
+                router.push(`/Company/payment/${contract.id}`)
+              }
             />
           ))}
         </div>
@@ -420,6 +423,13 @@ return (
             data={paginatedContracts}
             columns={contractColumns}
             getId={(row) => row.id}
+            actions={{
+              type: "button",
+              label: "View Payment",
+              onClick: (contract) => {
+                router.push(`/Company/payment/${contract.id}`);
+              },
+            }}
           />
         )}
 

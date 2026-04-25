@@ -357,11 +357,19 @@ export default function ContractListPage() {
   // Stats UI
   // =========================
   const contractStats = useMemo(() => {
+    const formatValue = (val: number) =>
+      statsLoading ? (
+        <SyncLoader size={8} color="#D4AF37" />
+      ) : (
+        <span style={{ color: val === 0 ? "gray" : "inherit" }}>
+          {val.toString()}
+        </span>
+      );
 
 return [
   {
     title: "Total Contracts",
-    value: contractStatsData.total,
+    value: formatValue(contractStatsData.total),
     subtitle: "All contracts in the system",
     color: "text-zinc-500",
     bg: "bg-zinc-500/10",
@@ -369,7 +377,7 @@ return [
   },
   {
     title: "Running",
-    value: contractStatsData.running,
+    value: formatValue(contractStatsData.running),
     subtitle: "Currently active contracts",
     color: "text-blue-500",
     bg: "bg-blue-500/10",
@@ -377,7 +385,7 @@ return [
   },
   {
     title: "Completed",
-    value: contractStatsData.completed,
+    value: formatValue(contractStatsData.completed),
     subtitle: "Finished contracts",
     color: "text-emerald-500",
     bg: "bg-emerald-500/10",
@@ -385,14 +393,14 @@ return [
   },
   {
     title: "Other",
-    value: contractStatsData.other,
+    value: formatValue(contractStatsData.other),
     subtitle: "Contracts with other status",
     color: "text-amber-500",
     bg: "bg-amber-500/10",
     icon: <MoreHorizontal className="w-5 h-5 text-amber-500" />,
   },
 ];
-  }, [contractStatsData]);
+  }, [contractStatsData, statsLoading]);
 
   // =========================
   // JSX

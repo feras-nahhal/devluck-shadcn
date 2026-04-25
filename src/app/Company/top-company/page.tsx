@@ -114,11 +114,19 @@ export default function TopCompanyPage() {
   );
 
     const companyStats = useMemo(() => {
+      const formatValue = (val: number) =>
+        loading ? (
+          <SyncLoader size={8} color="#D4AF37" />
+        ) : (
+          <span style={{ color: val === 0 ? "gray" : "inherit" }}>
+            {val.toString()}
+          </span>
+        );
 
       return [
         {
           title: "Total Companies",
-          value: totalCompanies,
+          value: formatValue(totalCompanies),
           subtitle: "All registered companies",
           icon: <FileText className="w-5 h-5 text-primary" />,
           color: "primary",
@@ -126,7 +134,7 @@ export default function TopCompanyPage() {
 
         {
           title: "Verified Companies",
-          value: verifiedCompanies,
+          value: formatValue(verifiedCompanies),
           subtitle: "Approved profiles",
           icon: <PlayCircle className="w-5 h-5 text-emerald-500" />,
           color: "emerald",
@@ -134,7 +142,7 @@ export default function TopCompanyPage() {
 
         {
           title: "Pending Companies",
-          value: pendingCompanies,
+          value: formatValue(pendingCompanies),
           subtitle: "Awaiting review",
           icon: <PauseCircle className="w-5 h-5 text-amber-500" />,
           color: "amber",
@@ -142,7 +150,7 @@ export default function TopCompanyPage() {
 
         {
           title: "Total Employees",
-          value: totalEmployees,
+          value: formatValue(totalEmployees),
           subtitle: "All available contracts",
           icon: <Clock className="w-5 h-5 text-blue-500" />,
           color: "blue",

@@ -268,32 +268,40 @@ const handleActionDelete = async () => {
   }).length;
 
   const opportunityStats = useMemo(() => {
+    const formatValue = (val: number) =>
+      loading ? (
+        <SyncLoader size={8} color="#D4AF37" />
+      ) : (
+        <span style={{ color: val === 0 ? "gray" : "inherit" }}>
+          {val.toString()}
+        </span>
+      );
 
    return [
   {
     title: "Total Opportunities",
-    value: totalOpportunities,
+    value: formatValue(totalOpportunities),
     subtitle: "All created opportunities",
     icon: <Briefcase className="w-5 h-5" />,
     iconColor: "#6366F1", // indigo (system / core)
   },
   {
     title: "Total Applicants",
-    value: totalApplicants,
+    value: formatValue(totalApplicants),
     subtitle: "Across all opportunities",
     icon: <Users className="w-5 h-5" />,
     iconColor: "#0EA5E9", // blue (users / info)
   },
   {
     title: "Internships",
-    value: internshipCount,
+    value: formatValue(internshipCount),
     subtitle: "Internship positions",
     icon: <GraduationCap className="w-5 h-5" />,
     iconColor: "#A855F7", // purple (education / learning)
   },
   {
     title: "New This Week",
-    value: recentOpportunities,
+    value: formatValue(recentOpportunities),
     subtitle: "Created in last 7 days",
     icon: <Sparkles className="w-5 h-5" />,
     iconColor: "#F59E0B", // amber (new / activity)
@@ -304,6 +312,7 @@ const handleActionDelete = async () => {
     totalApplicants,
     internshipCount,
     recentOpportunities,
+      loading
   ]);
 
 

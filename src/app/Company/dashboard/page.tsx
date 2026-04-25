@@ -143,38 +143,56 @@ export default function DashboardPage() {
     )
   }
 
-  const dashboardStats = useMemo(() => {
-    return [
-      {
-        title: "Opportunities",
-        value: opportunities.length,
-        icon: <Briefcase className="w-5 h-5" />,
-        iconColor: "#6366F1",
-        subtitle: "Recently created",
-      },
-      {
-        title: "Applications",
-        value: applications.length,
-        icon: <Users className="w-5 h-5" />,
-        iconColor: "#0EA5E9",
-        subtitle: "Total entries",
-      },
-      {
-        title: "Pending",
-        value: applications.filter((a) => a.status === "pending").length,
-        icon: <Clock className="w-5 h-5" />,
-        iconColor: "#F59E0B",
-        subtitle: "Needs review",
-      },
-      {
-        title: "Accepted",
-        value: applications.filter((a) => a.status === "accepted").length,
-        icon: <CheckCircle className="w-5 h-5" />,
-        iconColor: "#22C55E",
-        subtitle: "Approved",
-      },
-    ];
-  }, [opportunities, applications]);
+    const dashboardStats = useMemo(() => {
+    const formatValue = (val: number) =>
+      dashboardLoading ? (
+        <SyncLoader size={8} color="#D4AF37" />
+      ) : (
+        <span style={{ color: val === 0 ? "gray" : "inherit" }}>
+          {val}
+        </span>
+      );
+
+  return [
+    {
+      title: "Opportunities",
+      value: formatValue(opportunities.length),
+      icon: <Briefcase className="w-5 h-5" />,
+      iconColor: "#6366F1", // indigo
+      subtitle: "Recently created",
+    },
+    {
+      title: "Applications",
+      value: formatValue(applications.length),
+      icon: <Users className="w-5 h-5" />,
+      iconColor: "#0EA5E9", // sky blue
+      subtitle: "Total entries",
+    },
+    {
+      title: "Pending",
+      value: formatValue(
+        applications.filter((a) => a.status === "pending").length
+      ),
+      icon: <Clock className="w-5 h-5" />,
+      iconColor: "#F59E0B", // amber
+      subtitle: "Needs review",
+    },
+    {
+      title: "Accepted",
+      value: formatValue(
+        applications.filter((a) => a.status === "accepted").length
+      ),
+      icon: <CheckCircle className="w-5 h-5" />,
+      iconColor: "#22C55E", // green
+      subtitle: "Approved",
+    },
+  ];
+  }, [
+    opportunities.length,
+    applications.length,
+    applications,
+    dashboardLoading
+  ]);
 
 
 
