@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { tokenStorage } from "@/lib/auth/token";
 import { api as apiClient } from "@/lib/api";
+import { LoadingState } from "@/components/common/LoadingState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 type InviteData = {
   candidateName?: string;
@@ -38,6 +44,7 @@ export default function InvitePage() {
         if (!mounted) return;
         if (!found) {
           setError("Invite not found for your account");
+          toast.error("Invite not found for your account");
         } else {
           setInvite(found);
           setError(null);
@@ -45,6 +52,7 @@ export default function InvitePage() {
       } catch (err: any) {
         if (!mounted) return;
         setError(err.response?.data?.message || "Invalid or expired invite link");
+        toast.error("Invalid or expired invite link");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -57,54 +65,74 @@ export default function InvitePage() {
 
   if (loading) {
     return (
-      <div className="invite-page">
-        <div className="invite-card">
-          <h2>Checking your invite</h2>
-          <p>Please wait a moment...</p>
-        </div>
+      <div className="flex min-h-screen items-center justify-center px-4">
+          <LoadingState label="Checking your invite..." />
       </div>
     );
   }
 
   if (error || !invite) {
     return (
-      <div className="invite-page">
-        <div className="invite-card invite-error-card">
-          <div className="invite-error-icon">!</div>
-          <h2>Invite Not Valid</h2>
-          <p>{error || "This invite link is invalid or expired."}</p>
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-md ">
+          <ErrorState
+            title="Invite Not Valid"
+            description={error || "This invite link is invalid or expired."}
+          />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="invite-page">
-      <div className="invite-card">
-        <div className="invite-welcome">
-          <h2>Welcome{invite.candidateName ? `, ${invite.candidateName}` : ""}</h2>
-          <p className="invite-desc">You have been invited to start a private assessment.</p>
-        </div>
+    <div className="flex min-h-screen items-center justify-center px-4 py-8">
+      <Card className="w-full max-w-xl shadow-sm border">
+        <CardHeader className="space-y-2 text-center">
+          <CardTitle className="text-3xl font-bold tracking-tight">
+            Welcome
+            {invite.candidateName ? `, ${invite.candidateName}` : ""}
+          </CardTitle>
 
-        <div className="invite-details">
-          <div className="invite-detail-row">
-            <span className="invite-label">Role</span>
-            <span className="invite-value">{invite.opportunity?.title}</span>
-          </div>
-          <div className="invite-detail-row">
-            <span className="invite-label">Company</span>
-            <span className="invite-value">{invite.company?.name}</span>
-          </div>
-          <div className="invite-detail-row">
-            <span className="invite-label">Style</span>
-            <span className="invite-value invite-style-badge">{invite.opportunity?.companyStyle || "standard"}</span>
-          </div>
-        </div>
+          <CardDescription>
+            You have been invited to start a private assessment.
+          </CardDescription>
+        </CardHeader>
 
-        <button className="btn-enter-fullscreen" onClick={() => router.push(`/prepare/${inviteToken}`)}>
-          Continue
-        </button>
-      </div>
+        <CardContent className="space-y-6">
+          {/* DETAILS */}
+          <div className="rounded-xl border divide-y">
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-sm text-muted-foreground">Role</span>
+              <span className="font-medium">
+                {invite.opportunity?.title || "Not specified"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-sm text-muted-foreground">Company</span>
+              <span className="font-medium">
+                {invite.company?.name || "Not specified"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-sm text-muted-foreground">Style</span>
+
+              <Badge variant="secondary" className="capitalize">
+                {invite.opportunity?.companyStyle || "standard"}
+              </Badge>
+            </div>
+          </div>
+
+          {/* ACTION */}
+          <Button
+            className="w-full h-11 rounded-xl text-base font-semibold"
+            onClick={() => router.push(`/prepare/${inviteToken}`)}
+          >
+            Continue
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
