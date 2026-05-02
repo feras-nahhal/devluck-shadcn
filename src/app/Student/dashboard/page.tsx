@@ -1,12 +1,13 @@
 // src/app/Student/dashboard/page.tsx
 "use client";
 import DashboardLayout from "@/components/Student/DashboardLayout";
-import { ArrowUpRight, Calendar, Clock, DollarSign, FileText, Mail, PlayCircle, Settings, Star, User, X, XCircle } from 'lucide-react';
+import { ArrowUpRight, Calendar, Clock, DollarSign, FileText, Mail, PlayCircle, Settings, Star, Trophy, User, X, XCircle } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { useStudentProfileHandler } from "@/hooks/studentapihandler/useStudentProfileHandler";
 import { useStudentOpportunityHandler } from "@/hooks/studentapihandler/useStudentOpportunityHandler";
 import { useStudentDashboardHandler } from "@/hooks/studentapihandler/useStudentDashboardHandler";
 import { useStudentProfileReview } from "@/hooks/common/useStudentProfileReview";
+import { useGlobalRankingHandler } from "@/hooks/common/useGlobalRankingHandler";
 import { useEffect, useMemo, useState } from "react";
 import { CircleLoader, SyncLoader } from "react-spinners";
 import { useStudentApplicationHandler } from "@/hooks/studentapihandler/useStudentApplicationHandler";
@@ -101,6 +102,7 @@ export default function DashboardPage() {
   } = useStudentDashboardHandler();
 
   const { reviews, loading: reviewsLoading, getStudentReviews } = useStudentProfileReview();
+  const { ranking: studentRanking, getStudentGlobalRankingByStudentId } = useGlobalRankingHandler();
 
   const router = useRouter();
 
@@ -117,6 +119,7 @@ export default function DashboardPage() {
         ]);
         if (profileData?.id) {
           await Promise.all([
+            getStudentGlobalRankingByStudentId(profileData.id).catch(() => null),
             getStudentReviews(profileData.id),
             getUpcomingInterviews(profileData.id)
               .then((apiInterviews) => {
@@ -480,9 +483,13 @@ export default function DashboardPage() {
                   <div className="hidden lg:flex items-center gap-4">
                     <div className="text-right">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Applicant Rank</p>
-                      <p className="text-3xl font-black text-primary leading-none">
-                        {profile?.profileRanking ?? "N/A"}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-6 h-6 text-yellow-500" />
+
+                        <p className="text-3xl font-black text-primary leading-none">
+                          {studentRanking?.globalRank ?? "N/A"}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>

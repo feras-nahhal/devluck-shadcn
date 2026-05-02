@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/Student/DashboardLayout";
 import { useStudentProfileHandler } from "@/hooks/studentapihandler/useStudentProfileHandler";
+import { useGlobalRankingHandler } from "@/hooks/common/useGlobalRankingHandler";
 import {Calendar,Clock, DollarSign, Ellipsis,Mail,Plus,Settings, Trophy} from "lucide-react";
 import { useStudentProfileReview } from "@/hooks/common/useStudentProfileReview";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,6 +63,7 @@ export default function ApplicantPage() {
   } = useStudentProfileHandler();
 
   const { reviews, loading: reviewsLoading, getStudentReviews } = useStudentProfileReview();
+  const { ranking: studentRanking, getStudentGlobalRankingByStudentId } = useGlobalRankingHandler();
 
   const [isModalOpen1, setIsModalOpen1] = useState(false);
   const [editingProfile, setEditingProfile] = useState<any>(null);
@@ -123,6 +125,7 @@ export default function ApplicantPage() {
 
         if (profileData?.id) {
           getStudentReviews(profileData.id);
+          getStudentGlobalRankingByStudentId(profileData.id).catch(() => null);
         }
       } catch (error) {
         console.error("Error fetching profile data:", error);
@@ -228,7 +231,7 @@ export default function ApplicantPage() {
                 <div className="flex items-center justify-center gap-2">
                   <Trophy className="w-5 h-5 text-primary" />
                   <span className="text-3xl font-black text-primary">
-                    {profile?.profileRanking ?? "N/A"}
+                    {studentRanking?.globalRank ?? "N/A"}
                   </span>
                 </div>
               </div>

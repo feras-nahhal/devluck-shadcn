@@ -2,6 +2,7 @@
 import {useEffect, useState } from "react";
 import {useParams, useRouter } from "next/navigation";
 import DashboardLayout from "@/components/Student/DashboardLayout";
+import { useGlobalRankingHandler } from "@/hooks/common/useGlobalRankingHandler";
 import { useTopStudentsHandler } from "@/hooks/studentapihandler/useTopStudentsHandler";
 import {ArrowLeft, Calendar,DollarSign, FileText, Layers, Mail, Plus,Star, Trophy } from "lucide-react";
 import { useStudentProfileReview } from "@/hooks/common/useStudentProfileReview";
@@ -30,6 +31,14 @@ export default function ApplicantPage() {
   const params = useParams();
   const { applicantId } = params;
   const { student: applicant, loading, error, getTopStudentById } = useTopStudentsHandler();
+  const { ranking: applicantRanking, getStudentGlobalRankingByStudentId } = useGlobalRankingHandler();
+
+  useEffect(() => {
+    if (applicant?.id) {
+        getStudentGlobalRankingByStudentId(applicant?.id);
+    }
+  }, [applicant?.id]);
+  
   const isActive = applicant?.status === "active";
   const router = useRouter();
   const handleSaveReview = async (data: { rating: number; comment: string; id?: string }) => {
@@ -169,7 +178,7 @@ export default function ApplicantPage() {
               <div className="flex items-center justify-center gap-2">
                 <Trophy className="w-5 h-5 text-primary" />
                 <span className="text-3xl font-black text-primary">
-                  {applicant?.profileRanking ?? "N/A"}
+                  {applicantRanking?.globalRank ?? "N/A"}
                 </span>
               </div>
             </div>
@@ -179,28 +188,18 @@ export default function ApplicantPage() {
           <div className="mt-8 flex flex-col lg:flex-row gap-6">
 
             {/* STATS */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
+            <div className="grid grid-cols-2 md:grid-cols-2 gap-4 flex-1">
               {[
-                {
-                  label: "Contracts",
-                  value: applicant?.contractCount ?? "N/A",
-                  icon: FileText,
-                },
-                {
-                  label: "Applications",
-                  value: applicant?.applicationCount ?? "N/A",
-                  icon: Layers,
-                },
                 {
                   label: "Salary Expectation",
                   value: applicant?.salaryExpectation
                     ? `$${applicant.salaryExpectation}`
-                    : "—",
+                    : "N/A",
                   icon: DollarSign,
                 },
                 {
                   label: "Availability",
-                  value: applicant?.availability || "—",
+                  value: applicant?.availability || "N/A",
                   icon: Calendar,
                 },
               ].map((stat) => (
@@ -221,7 +220,7 @@ export default function ApplicantPage() {
             </div>
 
             {/* PROGRESS */}
-            <div className="w-full lg:w-[280px] p-4 rounded-xl border bg-muted/30 flex flex-col justify-center">
+            <div className="w-full lg:w-[600px] p-4 rounded-xl border bg-muted/30 flex flex-col justify-center">
               <div className="flex justify-between mb-2">
                 <span className="text-xs font-bold uppercase">
                   Profile Completion

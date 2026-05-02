@@ -3,14 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState,useEffect } from "react";
 import DashboardLayout from "@/components/Student/DashboardLayout";
-import { useTopStudentsHandler } from "@/hooks/studentapihandler/useTopStudentsHandler";
+import { useGlobalRankingHandler } from "@/hooks/common/useGlobalRankingHandler";
 import { motion } from "framer-motion";
 import DecryptedText from "@/components/ui/DecryptedText";
 
-import { FileSearch, User } from "lucide-react";
+import { FileSearch } from "lucide-react";
 import { Pagination } from "@/components/common/Pagination";
 import { EmptyState } from "@/components/common/EmptyState";
-import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { ApplicantCardSkeleton } from "@/components/Company/Skeleton/ApplicantCardSkeleton";
 import { TopApplicantCard } from "@/components/Student/TopApplicantCard";
@@ -18,15 +17,16 @@ import { TopApplicantCard } from "@/components/Student/TopApplicantCard";
 export default function ApplicantPage() {
   const router = useRouter();
   const {
-    students,
+    rankings,
     loading,
     error,
     totalPages,
-    currentPage,
-    getTopStudents,
-  } = useTopStudentsHandler();
+    page,
+    listStudentGlobalRankings,
+  } = useGlobalRankingHandler();
 
   const [itemsPerPage, setItemsPerPage] = useState(8);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // responsive page size
   useEffect(() => {
@@ -42,25 +42,28 @@ export default function ApplicantPage() {
 
   // fetch data
   useEffect(() => {
-    getTopStudents(currentPage, itemsPerPage);
-  }, [currentPage, itemsPerPage]);
+    listStudentGlobalRankings({
+      page: currentPage,
+      limit: itemsPerPage
+    });
+  }, [currentPage, itemsPerPage, listStudentGlobalRankings]);
 
   // pagination handlers (IMPORTANT FIX)
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
-      getTopStudents(page, itemsPerPage);
+      setCurrentPage(page);
     }
   };
 
   const goToPrevious = () => {
     if (currentPage > 1) {
-      getTopStudents(currentPage - 1, itemsPerPage);
+      setCurrentPage(currentPage - 1);
     }
   };
 
   const goToNext = () => {
     if (currentPage < totalPages) {
-      getTopStudents(currentPage + 1, itemsPerPage);
+      setCurrentPage(currentPage + 1);
     }
   };
 
@@ -123,12 +126,17 @@ export default function ApplicantPage() {
                     <ErrorState 
                       title="Failed to load" 
                       description={error} 
-                      onRetry={() => getTopStudents(1, 1000)}
+                      onRetry={() =>
+                        listStudentGlobalRankings({
+                          page: currentPage,
+                          limit: itemsPerPage
+                        })
+                      }
                     />
               )}
 
               {/* Empty State */}
-               {!loading && !error && students.length === 0 && (
+               {!loading && !error && rankings.length === 0 && (
                 <EmptyState
                   icon={<FileSearch className="h-10 w-10 text-muted-foreground" />}
                   title="No students found"
@@ -137,14 +145,26 @@ export default function ApplicantPage() {
               )}
 
               {/* GRID */}
-            {!loading && !error && students.length > 0 && (
+            {!loading && !error && rankings.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {students.map((student) => (
+                {rankings.map((row) => (
                   <TopApplicantCard
-                    key={student.id}
-                    applicant={student}
+                    key={row.studentId}
+                    applicant={{
+                      id: row.student.id,
+                      name: row.student.name,
+                      email: row.student.email,
+                      image: row.student.image,
+                      availability: row.student.availability,
+                      profileRanking: row.globalRank,
+                      profileComplete: row.student.profileComplete,
+                      salaryExpectation: row.student.salaryExpectation,
+                      description: null,
+                      status: null,
+                      applicationCount: 0
+                    }}
                     onClick={() =>
-                      router.push(`/Student/top-student/${student.id}`)
+                      router.push(`/Student/top-student/${row.student.id}`)
                     }
                   />
                 ))}

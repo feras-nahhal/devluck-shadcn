@@ -9,6 +9,7 @@ export interface CompanyAddress {
 export interface TopCompany {
   id: string
   name: string
+  globalRank?: number | null
   logo?: string | null
   image?: string | null
   address?: string | null

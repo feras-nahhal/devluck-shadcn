@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo} from "react";
 import { useRouter, useParams } from "next/navigation";
 import DashboardLayout from "@/components/Company/DashboardLayout";
 import { useCompanyApplicationHandler } from "@/hooks/companyapihandler/useCompanyApplicationHandler";
+import { useGlobalRankingHandler } from "@/hooks/common/useGlobalRankingHandler";
 import {Activity, ArrowLeft, Calendar, DollarSign, FileText, Layers, Mail, Plus, Star, Trophy } from "lucide-react";
 import { useStudentProfileReview } from "@/hooks/common/useStudentProfileReview";
 import EmptyStateFeedback from "@/components/common/EmptyStateFeedback";
@@ -58,6 +59,7 @@ export default function ApplicantPage() {
     error,
     getStudentProfileById,
   } = useCompanyApplicationHandler();
+  const { ranking: applicantRanking, getStudentGlobalRankingByStudentId } = useGlobalRankingHandler();
 
     const mappedStudent = useMemo(() => {
     if (!student) return null;
@@ -91,6 +93,7 @@ export default function ApplicantPage() {
       try {
         await getStudentProfileById(applicantId as string);
         await getStudentReviews(applicantId as string);
+        await getStudentGlobalRankingByStudentId(applicantId as string);
       } catch (error) {
         console.error("Error fetching student profile:", error);
         toast.error("Error fetching student profile:");
@@ -99,7 +102,7 @@ export default function ApplicantPage() {
     if (applicantId) {
       fetchData();
     }
-  }, [getStudentProfileById, applicantId]);
+  }, [getStudentProfileById, getStudentReviews, getStudentGlobalRankingByStudentId, applicantId]);
 
 
   if (loading) {
@@ -227,7 +230,7 @@ if (error || !student) {
                 <p className="text-[10px] uppercase font-bold tracking-tighter text-primary/60 mb-1">Expert Score</p>
                 <div className="flex items-center justify-center gap-2">
                     <Trophy className="w-5 h-5 text-primary" />
-                    <span className="text-3xl font-black text-primary">{s?.profileRanking}</span>
+                    <span className="text-3xl font-black text-primary">{applicantRanking?.globalRank ?? "N/A"}</span>
                 </div>
               </div>
           </div>
@@ -236,11 +239,9 @@ if (error || !student) {
           <div className="mt-8 flex flex-col lg:flex-row gap-6">
 
             {/* STATS */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
+            <div className="grid grid-cols-2 md:grid-cols-2 gap-4 flex-1">
 
               {[
-                { label: "Contracts", value: "N/A", icon: FileText },
-                { label: "Applications", value: "N/A", icon: Layers },
                 {
                   label: "Salary Expectation",
                   value: s?.salaryExpectation ? `$${s.salaryExpectation}` : "N/A",
@@ -269,7 +270,7 @@ if (error || !student) {
             </div>
 
             {/* PROGRESS */}
-            <div className="w-full lg:w-[280px] p-4 rounded-xl border bg-muted/30 flex flex-col justify-center">
+            <div className="w-full lg:w-[600px] p-4 rounded-xl border bg-muted/30 flex flex-col justify-center">
 
               <div className="flex justify-between mb-2">
                 <span className="text-xs font-bold uppercase">

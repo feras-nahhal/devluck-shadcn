@@ -2,6 +2,7 @@
 import { useParams, useRouter } from "next/navigation";
 import DashboardLayout from "@/components/Company/DashboardLayout";
 import { useTopCompanyHandler } from "@/hooks/companyapihandler/useTopCompanyHandler";
+import { useCompanyGlobalRankingHandler } from "@/hooks/common/useCompanyGlobalRankingHandler";
 import { useReviewHandler } from "@/hooks/companyapihandler/useReviewHandler";
 import { useState, useEffect } from "react";
 import { useDocumentHandler } from "@/hooks/companyapihandler/useDocumentHandler";
@@ -33,6 +34,7 @@ export default function TopCompanyPage() {
     const params = useParams();
     const { companyId } = params;
     const { topCompany, loading, error, getTopCompanyById } = useTopCompanyHandler();
+    const { ranking: companyRanking, getCompanyGlobalRankingByCompanyId } = useCompanyGlobalRankingHandler();
     const { reviews: companyReviews, getReviews } = useReviewHandler();
     const { documents, getDocuments } = useDocumentHandler();
     const [files, setFiles] = useState<UploadItem[]>([]);
@@ -63,17 +65,19 @@ export default function TopCompanyPage() {
                 console.error('Failed to load company details:', err);
                 toast.error('Failed to load company details:');
             });
+            getCompanyGlobalRankingByCompanyId(companyId).catch(() => null);
             getReviews(companyId);
         }
-    }, [companyId, getTopCompanyById, getReviews]);
+    }, [companyId, getTopCompanyById, getCompanyGlobalRankingByCompanyId, getReviews]);
 
     useEffect(() => {
         if (companyId && typeof companyId === "string") {
             getTopCompanyById(companyId);
+            getCompanyGlobalRankingByCompanyId(companyId).catch(() => null);
             getReviews(companyId);
             getDocuments(companyId); // ✅ pass companyId here
         }
-    }, [companyId, getTopCompanyById, getReviews, getDocuments]);
+    }, [companyId, getTopCompanyById, getCompanyGlobalRankingByCompanyId, getReviews, getDocuments]);
 
 
     /* =========================
@@ -245,7 +249,7 @@ export default function TopCompanyPage() {
   >
     <Card className="rounded-2xl border shadow-sm hover:shadow-md transition-all h-full flex flex-col">
 
-      <CardHeader className="border-b bg-muted/20">
+      <CardHeader>
         <CardTitle>Addresses</CardTitle>
         <CardDescription>
           Company locations & contact details
@@ -303,8 +307,8 @@ export default function TopCompanyPage() {
   >
     <Card className="rounded-2xl border shadow-sm hover:shadow-md transition-all h-full flex flex-col">
 
-      <CardHeader className="border-b bg-muted/20">
-        <CardTitle>Profile Ranking</CardTitle>
+      <CardHeader>
+        <CardTitle>Global Rank</CardTitle>
         <CardDescription>
           Overall profile strength & completion
         </CardDescription>
@@ -314,7 +318,7 @@ export default function TopCompanyPage() {
 
         {/* BIG SCORE */}
         <div className="text-6xl font-bold tracking-tight text-muted-foreground">
-          {company?.profileRanking ?? "N/A"}
+          {companyRanking ? `#${companyRanking.globalRank}` : "N/A"}
         </div>
 
         {/* PROGRESS */}
@@ -395,7 +399,7 @@ export default function TopCompanyPage() {
                     }} 
                     onView={() =>
                       router.push(
-                        `/Student/top-company/${companyId}/applicant/${student?.id}`
+                        `/Company/top-company/${companyId}/applicant/${student?.id}`
                       )
                     }
                   />
@@ -637,11 +641,16 @@ export default function TopCompanyPage() {
 
                     {/* USER */}
                     <div className="flex items-center gap-3">
-                    <img
-                        src={review.studentImage || "/default-avatar.png"}
-                        alt={review.name}
-                        className="w-8 h-8 rounded-full object-cover"
-                    />
+                      {/* AVATAR */}
+                      <Avatar className="w-8 h-8 rounded-full">
+                        <AvatarImage
+                          src={review.studentImage || undefined}
+                          className="object-cover"
+                        />
+                        <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                          {review.name?.charAt(0)?.toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
 
                     <div>
                         <p className="text-sm font-medium">{review.name}</p>

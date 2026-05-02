@@ -6,6 +6,7 @@ import { useCompanyProfileHandler } from "@/hooks/companyapihandler/useCompanyPr
 import { useProgramHandler } from "@/hooks/companyapihandler/useProgramHandler";
 import { useReviewHandler } from "@/hooks/companyapihandler/useReviewHandler";
 import { useDocumentHandler } from "@/hooks/companyapihandler/useDocumentHandler";
+import { useCompanyGlobalRankingHandler } from "@/hooks/common/useCompanyGlobalRankingHandler";
 import { api } from "@/lib/api";
 import {  Download, Eye,MoreVertical, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -59,10 +60,20 @@ export default function TopCompanyPage() {
 
 
     const { profile, profileLoading, getProfile, updateProfile, uploadLogo, uploadLogoLoading, uploadLogoError, employees, employeesLoading, getEmployees } = useCompanyProfileHandler();
+    const {
+    ranking: companyRanking,
+    loading: rankingLoading,getCompanyGlobalRankingByCompanyId
+    } = useCompanyGlobalRankingHandler();
     const { programs, loading: programsLoading, getPrograms } = useProgramHandler();
     const { reviews: companyReviews, loading: reviewsLoading, getReviews } = useReviewHandler();
     const { documents, documentsLoading, getDocuments, uploadDocument, deleteDocument } = useDocumentHandler();
-    const company = profile as any;
+    const company = profile ;
+
+    useEffect(() => {
+    if (profile?.id) {
+        getCompanyGlobalRankingByCompanyId(profile.id);
+    }
+    }, [profile?.id]);
 
     useEffect(() => {
         getProfile();
@@ -511,7 +522,11 @@ const handleFiles = (incoming: File[]) => {
             </Badge>
             {/* RANK */}
             <Badge variant="outline" className="text-xs whitespace-nowrap">
-            Rank #{company?.profileRanking ?? "N/A"}
+            {rankingLoading
+                ? "Loading..."
+                : companyRanking
+                ? `Rank #${companyRanking.globalRank}`
+                : "Rank N/A"}
             </Badge>
 
         </div>
@@ -640,7 +655,7 @@ const handleFiles = (incoming: File[]) => {
             <Card className="rounded-2xl border shadow-sm hover:shadow-md transition-all h-full flex flex-col">
 
             <CardHeader>
-                <CardTitle>Profile Progress</CardTitle>
+                <CardTitle>Global Rank</CardTitle>
                 <CardDescription>
                 Overall profile strength & completion
                 </CardDescription>
@@ -650,7 +665,7 @@ const handleFiles = (incoming: File[]) => {
 
                 {/* BIG PROGRESS NUMBER */}
                 <div className="text-6xl font-bold tracking-tight text-muted-foreground">
-                {company?.progress ?? 0}%
+                    {companyRanking ? `#${companyRanking.globalRank}` : "N/A"}
                 </div>
 
                 {/* PROGRESS BAR */}

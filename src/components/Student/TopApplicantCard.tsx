@@ -151,15 +151,10 @@ export function TopApplicantCard({ applicant, onClick }: Props) {
         {/* GRID */}
         <div className="grid grid-cols-2 gap-3 text-sm">
 
-          <div className="p-3 rounded-lg bg-muted">
-            <p className="text-muted-foreground">Applications</p>
-            <p className="font-medium">{applicant.applicationCount}</p>
-          </div>
-
-          <div className="p-3 rounded-lg bg-muted">
+          <div className="p-3 rounded-lg bg-muted col-span-2">
             <p className="text-muted-foreground">Ranking</p>
             <p className="font-medium">
-              {applicant.profileRanking ?? 0}%
+              #{applicant.profileRanking ?? 0}
             </p>
           </div>
 

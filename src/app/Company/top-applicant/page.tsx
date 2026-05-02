@@ -2,7 +2,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/Company/DashboardLayout";
-import { useTopApplicantHandler } from "@/hooks/companyapihandler/useTopApplicantHandler";
+import { useGlobalRankingHandler } from "@/hooks/common/useGlobalRankingHandler";
 import { useState, useMemo,useEffect } from "react";
 import { motion } from "framer-motion";
 import { FileSearch } from 'lucide-react';
@@ -10,10 +10,8 @@ import DecryptedText from "@/components/ui/DecryptedText";
 import { toast } from "sonner";
 import { Pagination } from "@/components/common/Pagination";
 import { EmptyState } from "@/components/common/EmptyState";
-import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { TopStudentCard } from "@/components/Company/TopStudentCard";
-import { ApplicantStatus } from "@/types/applicant";
 import { ApplicantCardSkeleton } from "@/components/Company/Skeleton/ApplicantCardSkeleton";
    
 
@@ -31,17 +29,21 @@ export default function TopApplicantPage() {
 /* ──────────────────────────────────────────────
   Data Hook
 ────────────────────────────────────────────── */
-  const { topApplicants, loading, error, getTopApplicants } = useTopApplicantHandler();
+  const { rankings, loading, error, listStudentGlobalRankings, totalPages } = useGlobalRankingHandler();
 
 /* ──────────────────────────────────────────────
   Effects
 ────────────────────────────────────────────── */
   useEffect(() => {
-    getTopApplicants(1, 100, searchQuery).catch((err) => {
+    listStudentGlobalRankings({
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchQuery
+    }).catch((err) => {
       console.error('Failed to load top applicants:', err);
       toast.error('Failed to load top applicants. Please try again later.');
     });
-  }, [getTopApplicants, searchQuery]);
+  }, [listStudentGlobalRankings, currentPage, itemsPerPage, searchQuery]);
 
   useEffect(() => {
     const updateItemsPerPage = () => {
@@ -60,40 +62,22 @@ export default function TopApplicantPage() {
      Filter
   ────────────────────────────────────────────── */
 
-  const filteredApplicants = useMemo(() => {
-    // 🔹 STEP 1: map API → UI model
-    const mapped = topApplicants.map((a) => ({
-      applicantId: a.id,
-      name: a.name,
-      image: a.image,
-      email: a.email,
-      status:a.status,
-      profileRanking: a.profileRanking|| 0,
-      profileComplete: a.profileComplete,
-      availability: a.availability || "N/A",
+  const mappedApplicants = useMemo(() => {
+    return rankings.map((row) => ({
+      applicantId: row.student.id,
+      name: row.student.name,
+      image: row.student.image,
+      email: row.student.email,
+      status: "active",
+      profileRanking: row.globalRank,
+      profileComplete: row.student.profileComplete,
+      availability: row.student.availability || "N/A",
     }));
-
-    // 🔹 STEP 2: filter
-    if (!searchQuery.trim()) {
-      return mapped;
-    }
-
-    const searchLower = searchQuery.toLowerCase();
-
-    return mapped.filter((applicant) =>
-      applicant.name?.toLowerCase().includes(searchLower) ||
-      applicant.applicantId?.toLowerCase().includes(searchLower) ||
-      applicant.email?.toLowerCase().includes(searchLower)
-    );
-  }, [topApplicants, searchQuery]);
+  }, [rankings]);
   /* ──────────────────────────────────────────────
   Pagination
   ────────────────────────────────────────────── */
-  const totalPages = Math.ceil(filteredApplicants.length / itemsPerPage);
-  const paginatedApplicants = filteredApplicants.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const paginatedApplicants = mappedApplicants;
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
@@ -168,7 +152,7 @@ export default function TopApplicantPage() {
               <ErrorState
                 title="Failed to load Applicants"
                 description={error}
-                onRetry={() => topApplicants}
+                onRetry={() => listStudentGlobalRankings({ page: currentPage, limit: itemsPerPage, search: searchQuery })}
               />
             )}
 

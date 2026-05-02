@@ -25,8 +25,8 @@ import {
   Trash2,
   MapPin,
   Phone,
-  Building2,
   Fingerprint,
+  Trophy,
 } from "lucide-react";
 
 import { InfoItem } from "./info-item";
@@ -69,43 +69,16 @@ export function CompanyCard({
               {(company.id || "").slice(0, 8)}
             </div>
 
+
           </div>
 
-          {/* RIGHT TOP (MENU) */}
+          {/* RIGHT TOP (Rank) */}
           <div className="absolute right-3 top-3 z-10">
-            {/* MENU */}
-            {showMenu && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 rounded-full  backdrop-blur flex items-center justify-center transition"
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent align="end" className="min-w-[150px]">
-                  <DropdownMenuItem onClick={onClick}>
-                    <Eye className="h-4 w-4 mr-2" />
-                    View
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem onClick={onEdit}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem
-                    className="text-red-500"
-                    onClick={onDelete}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            {typeof company.globalRank === "number" && (
+              <div className="flex items-center gap-1 bg-primary/80 text-primary-foreground px-2 py-0.5 rounded-md text-[12px] backdrop-blur">
+                <Trophy className="h-3 w-3" />
+                {`#${company.globalRank}`}
+              </div>
             )}
           </div>
 

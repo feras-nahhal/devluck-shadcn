@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useMemo, useEffect } from "react";
 import DashboardLayout from "@/components/Student/DashboardLayout";
 import { useTopCompanyHandler} from "@/hooks/companyapihandler/useTopCompanyHandler";
+import { useCompanyGlobalRankingHandler } from "@/hooks/common/useCompanyGlobalRankingHandler";
 import { Clock, File, FileText, PauseCircle, PlayCircle} from 'lucide-react';
 import { motion } from "framer-motion";
 import { SyncLoader } from "react-spinners";
@@ -30,16 +31,35 @@ export default function TopCompanyPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 //hook
-  const { topCompanies, loading, error, getTopCompanies } = useTopCompanyHandler();
+  const { loading, error } = useTopCompanyHandler();
+  const { rankings, listCompanyGlobalRankings } = useCompanyGlobalRankingHandler();
 //useEffect
   useEffect(() => {
-    getTopCompanies(1, 100).catch((err) => {
+    listCompanyGlobalRankings({ page: 1, limit: 100 }).catch((err) => {
       console.error('Failed to load top companies:', err);
       toast.error("Failed to load top companies");
     });
-  }, [getTopCompanies]);
+  }, [listCompanyGlobalRankings]);
 //filter
   const filteredCompanies = useMemo(() => {
+    const topCompanies: TopCompany[] = rankings.map((item) => ({
+      id: item.company.id,
+      name: item.company.name,
+      logo: item.company.logo,
+      image: item.company.logo,
+      phoneNumber: null,
+      address: null,
+      addresses: [],
+      status: item.company.status,
+      industry: item.company.industry,
+      location: item.company.location,
+      website: item.company.website,
+      size: item.company.size,
+      employeeNumber: 0,
+      opportunityCount: 0,
+      contractsCount: Math.round(item.contractsScore ?? 0),
+      globalRank: item.globalRank
+    }));
     if (!topCompanies || topCompanies.length === 0) return [];
     
     return topCompanies.filter(company => {
@@ -47,8 +67,8 @@ export default function TopCompanyPage() {
         !searchQuery.trim() ||
         company.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         company.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        company.phoneNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        company.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(company.phoneNumber || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(company.address || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
         company.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (company.addresses && company.addresses.some(addr => 
           addr.address?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -56,7 +76,7 @@ export default function TopCompanyPage() {
   
       return searchMatch;
     });
-  }, [topCompanies, searchQuery]);
+  }, [rankings, searchQuery]);
      
      
          
@@ -106,17 +126,17 @@ const [itemsPerPage, setItemsPerPage] = useState(10); // default 10 for desktop
         const visiblePages = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
         const showPlus = endPage < totalPages; // whether to show "+" button
 
-        const totalCompanies = topCompanies.length;
+        const totalCompanies = filteredCompanies.length;
 
-        const verifiedCompanies = topCompanies.filter(
+        const verifiedCompanies = filteredCompanies.filter(
           (company) => company.status === "Verified"
         ).length;
 
-        const pendingCompanies = topCompanies.filter(
+        const pendingCompanies = filteredCompanies.filter(
           (company) => company.status === "Pending"
         ).length;
 
-        const totalContracts = topCompanies.reduce(
+        const totalContracts = filteredCompanies.reduce(
           (sum, company) => sum + (company.contractsCount || 0),
           0
         );
@@ -257,7 +277,7 @@ const [itemsPerPage, setItemsPerPage] = useState(10); // default 10 for desktop
               <ErrorState
                 title="Failed to load companies"
                 description={error || "We couldn’t fetch companies. Please try again."}
-                onRetry={() => getTopCompanies()}
+                onRetry={() => listCompanyGlobalRankings({ page: 1, limit: 100 })}
               />
             )}
 
@@ -306,6 +326,11 @@ const [itemsPerPage, setItemsPerPage] = useState(10); // default 10 for desktop
                     router.push(`/Student/top-company/${c.id}`),
                 }}
                 columns={[
+                  {
+                    header: "Rank",
+                    cell: (c: TopCompany) =>
+                      typeof c.globalRank === "number" ? `#${c.globalRank}` : "N/A",
+                  },
                   {
                     header: "ID",
                     cell: (c: TopCompany) =>

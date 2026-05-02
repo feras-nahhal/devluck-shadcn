@@ -30,8 +30,8 @@ import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 import { loginSchema, registerSchema } from "@/lib/schemas/auth"
 import { useAuth } from "@/hooks/useAuth"
+import { usePasswordReset } from "@/hooks/usePasswordReset"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "../ui/input-otp"
-import React from "react"
 
 /* ---------------- TYPES ---------------- */
 
@@ -76,17 +76,16 @@ export default function AuthSystem({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const { login, signup, loading } = useAuth()
+  const {
+    forgotPassword,
+    resetPassword,
+    loading: resetLoading,
+  } = usePasswordReset()
   const router = useRouter()
   const { setTheme } = useTheme()
 
-  const [pin, setPin] = useState("")
+  const [resetCode, setResetCode] = useState("")
   const [newPassword, setNewPassword] = useState("")
-
-  React.useEffect(() => {
-    if (pin.length === 6) {
-      console.log("Entered PIN:", pin)
-    }
-  }, [pin])
 
   /* ---------------- GET SCHEMA (FIXED) ---------------- */
 
@@ -148,29 +147,43 @@ export default function AuthSystem({
   }
 
   const handleSendPin = async () => {
+    if (resetLoading) return
+
+    if (!email) {
+      toast.error("Email is required")
+      return
+    }
+    try {
+      await forgotPassword(email)
+      setMode("reset")
+      toast.success("Enter your code to reset password")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to request password reset"
+      toast.error(message)
+    }
+  }
+
+  const handleResetPassword = async () => {
     if (!email) {
       toast.error("Email is required")
       return
     }
 
-    await new Promise((res) => setTimeout(res, 1000))
-
-    toast.success("PIN sent to your email (mock)")
-    console.log("Mock PIN: 123456")
-
-    setMode("reset")
-  }
-
-  const handleResetPassword = async () => {
-    if (!pin || !newPassword || confirmPassword !== newPassword) {
+    if (resetCode.length !== 6 || !newPassword || confirmPassword !== newPassword) {
       toast.error("Please fix the errors")
       return
     }
-
-    await new Promise((res) => setTimeout(res, 1000))
-
-    toast.success("Password reset successful 🎉")
-    setMode("login")
+    try {
+      const message = await resetPassword(email, resetCode, newPassword)
+      toast.success(message)
+      setMode("login")
+      setResetCode("")
+      setNewPassword("")
+      setConfirmPassword("")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to reset password"
+      toast.error(message)
+    }
   }
 
   /* ---------------- UI ---------------- */
@@ -228,7 +241,7 @@ export default function AuthSystem({
                   ? "Create an account"
                   : mode === "forgot"
                   ? "Reset your password"
-                  : "Enter verification code"}
+                  : "Enter recovery code"}
               </CardTitle>
 
               <CardDescription>
@@ -238,7 +251,7 @@ export default function AuthSystem({
                   ? "Fill in your details to get started."
                   : mode === "forgot"
                   ? "We’ll send you a reset code via email."
-                  : "Enter the 6-digit code and your new password."}
+                  : "Enter your code to reset password."}
               </CardDescription>
             </motion.div>
           </CardHeader>
@@ -432,8 +445,15 @@ export default function AuthSystem({
                   />
                 </div>
 
-                <Button onClick={handleSendPin} className="w-full">
-                  Send Code
+                <Button onClick={handleSendPin} className="w-full" disabled={resetLoading}>
+                  {resetLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending code...
+                    </>
+                  ) : (
+                    "Send Code"
+                  )}
                 </Button>
 
                 <p className="text-center text-sm">
@@ -450,28 +470,36 @@ export default function AuthSystem({
 
             {mode === "reset" && (
               <motion.div variants={item} className="space-y-4">
-                
-                {/* OTP */}
-                <div className="flex justify-center">
-                  <InputOTP
-                    maxLength={6}
-                    value={pin}
-                    onChange={(value) => setPin(value)}
-                  >
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="yourname@devluck.com"
+                  />
                 </div>
 
-                {/* PASSWORDS */}
+                <div className="space-y-2">
+                  <Label>Recovery Code</Label>
+                  <div className="flex justify-center">
+                    <InputOTP
+                      maxLength={6}
+                      value={resetCode}
+                      onChange={(value) => setResetCode(value)}
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                </div>
+
                 <div className="space-y-3">
-                  {/* New Password */}
                   <div className="space-y-2">
                     <Label>New Password</Label>
                     <Input
@@ -481,7 +509,6 @@ export default function AuthSystem({
                     />
                   </div>
 
-                  {/* Confirm Password */}
                   <div className="space-y-2">
                     <Label>Confirm Password</Label>
                     <Input
@@ -503,27 +530,27 @@ export default function AuthSystem({
                   </div>
                 </div>
 
-                {/* BUTTON */}
                 <Button
                   onClick={handleResetPassword}
                   className="w-full"
                   disabled={
-                    pin.length < 6 ||
+                    !email ||
+                    resetCode.length !== 6 ||
                     !newPassword ||
-                    confirmPassword !== newPassword
+                    confirmPassword !== newPassword ||
+                    resetLoading
                   }
                 >
-                  Reset Password
+                  {resetLoading ? "Resetting..." : "Reset Password"}
                 </Button>
 
-                {/* RESEND */}
                 <div className="text-center text-sm">
-                  Didn’t receive code?{" "}
+                  Need a new code?{" "}
                   <button
-                    onClick={handleSendPin}
+                    onClick={() => setMode("forgot")}
                     className="text-primary hover:underline"
                   >
-                    Resend
+                    Request again
                   </button>
                 </div>
 

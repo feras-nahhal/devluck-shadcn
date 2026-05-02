@@ -5,6 +5,7 @@ import DashboardLayout from "@/components/Company/DashboardLayout";
 
 import { useContractHandler } from "@/hooks/companyapihandler/useContractHandler";
 import { usePaymentHandler } from "@/hooks/companyapihandler/usePaymentHandler";
+import { useGlobalRankingHandler } from "@/hooks/common/useGlobalRankingHandler";
 import { api } from "@/lib/api";
 import { AlertCircle, ArrowLeft, Calendar, Clock, CreditCard, DollarSign, FileText, Layers, Mail, Plus, Star, Trophy, UserCheck,  } from "lucide-react";
 import { SyncLoader } from "react-spinners";
@@ -112,6 +113,7 @@ export default function ApplicantPage() {
   // ------------------ Hooks -------------------
   const { getContractById } = useContractHandler();
   const { listPayments, getPaymentStats, deletePayment, error: paymentError } = usePaymentHandler();
+  const { ranking: applicantRanking, getStudentGlobalRankingByStudentId } = useGlobalRankingHandler();
 
   // ------------------ Fetch Contract, Student Profile, and Payments -------------------
   useEffect(() => {
@@ -140,6 +142,7 @@ export default function ApplicantPage() {
             );
             setStudent(studentResponse.data.data);
             await getStudentReviews(contractWithStudentId.studentId);
+            await getStudentGlobalRankingByStudentId(contractWithStudentId.studentId);
           } catch (error: any) {
             // Don't fail the whole page if student profile fails
           } finally {
@@ -176,7 +179,7 @@ export default function ApplicantPage() {
     };
 
     fetchData();
-  }, [contractId, getContractById, listPayments, getPaymentStats]);
+  }, [contractId, getContractById, listPayments, getPaymentStats, getStudentReviews, getStudentGlobalRankingByStudentId]);
 
 
 
@@ -401,7 +404,7 @@ export default function ApplicantPage() {
         <p className="text-[10px] uppercase font-bold tracking-tighter text-primary/60 mb-1">Expert Score</p>
         <div className="flex items-center justify-center gap-2">
           <Trophy className="w-5 h-5 text-primary" />
-          <span className="text-3xl font-black text-primary">{student?.profileRanking}</span>
+          <span className="text-3xl font-black text-primary">{applicantRanking?.globalRank ?? "N/A"}</span>
         </div>
       </div>
     </div>
@@ -457,10 +460,9 @@ export default function ApplicantPage() {
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* QUICK STATS GRID */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-4 flex-1">
           {[
-            { label: "Contracts", value: "N/A", icon: FileText },
-            { label: "Applications", value: "N/A", icon: Layers },
+
             { 
               label: "Salary", 
               value: student?.salaryExpectation ? `$${student.salaryExpectation}` : "N/A", 
@@ -483,7 +485,7 @@ export default function ApplicantPage() {
         </div>
 
         {/* COMPLETION PROGRESS */}
-        <div className="w-full lg:w-[280px] p-4 rounded-xl border bg-muted/30 flex flex-col justify-center border-dashed">
+        <div className="w-full lg:w-[600px] p-4 rounded-xl border bg-muted/30 flex flex-col justify-center border-dashed">
           <div className="flex justify-between mb-2">
             <span className="text-xs font-bold uppercase">Profile Completion</span>
             <span className="text-sm font-bold text-primary">{student?.profileComplete ?? 0}%</span>

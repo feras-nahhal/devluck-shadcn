@@ -5,6 +5,7 @@ import { useState, useMemo,useEffect } from "react";
 import { Check,Eye,FileSearch,Trash2} from 'lucide-react';
 import DashboardLayout from "@/components/Company/DashboardLayout";
 import { useCompanyApplicationHandler } from "@/hooks/companyapihandler/useCompanyApplicationHandler";
+import { useGlobalRankingHandler } from "@/hooks/common/useGlobalRankingHandler";
 import {motion } from "framer-motion";
 import DecryptedText from "@/components/ui/DecryptedText";
 import React from "react";
@@ -41,6 +42,7 @@ export default function ApplicantPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [rankMap, setRankMap] = useState<Record<string, number>>({});
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkUpdating, setBulkUpdating] = useState(false);
@@ -57,7 +59,7 @@ export default function ApplicantPage() {
   /* ──────────────────────────────────────────────
      Mapping
   ────────────────────────────────────────────── */
-function mapApplicant(app: any, index: number): Applicant {
+function mapApplicant(app: any, index: number, ranks: Record<string, number>): Applicant {
   const student = app.student;
 
   const applicantId = student?.id || app.id;
@@ -85,7 +87,7 @@ function mapApplicant(app: any, index: number): Applicant {
     skills: [],
     description: student?.description || "",
 
-    profileRanking: student?.profileRanking || 0,
+    profileRanking: ranks[applicantId] ?? 0,
     profileComplete: student?.profileComplete || 0,
 
     status: (app.status as ApplicantStatus) ?? "pending",
@@ -122,6 +124,7 @@ function mapApplicant(app: any, index: number): Applicant {
     getAllApplications,
     updateApplicationStatus,
   } = useCompanyApplicationHandler();
+  const { listStudentGlobalRankings } = useGlobalRankingHandler();
 
   /* ──────────────────────────────────────────────
       Effects
@@ -129,9 +132,16 @@ function mapApplicant(app: any, index: number): Applicant {
     useEffect(() => {
     const fetchApplicants = async () => {
       try {
+        const rankingData = await listStudentGlobalRankings({ page: 1, limit: 1000 });
+        const rankingLookup = rankingData.items.reduce((acc, row) => {
+          acc[row.studentId] = row.globalRank;
+          return acc;
+        }, {} as Record<string, number>);
+        setRankMap(rankingLookup);
+
         const response = await getAllApplications(1, 100);
 
-        const mapped = response.items.map(mapApplicant);
+        const mapped = response.items.map((item, idx) => mapApplicant(item, idx, rankingLookup));
 
         // remove duplicates by applicantId
         const unique = Array.from(
@@ -147,7 +157,7 @@ function mapApplicant(app: any, index: number): Applicant {
     };
 
     fetchApplicants();
-  }, [getAllApplications]);
+  }, [getAllApplications, listStudentGlobalRankings]);
 
   /* ──────────────────────────────────────────────
       Handlers
@@ -166,7 +176,7 @@ function mapApplicant(app: any, index: number): Applicant {
 
       const response = await getAllApplications(1, 100);
 
-      const mapped = response.items.map(mapApplicant);
+      const mapped = response.items.map((item, idx) => mapApplicant(item, idx, rankMap));
 
       const unique = Array.from(
         new Map(mapped.map((a) => [a.applicantId, a])).values()
@@ -202,7 +212,7 @@ function mapApplicant(app: any, index: number): Applicant {
 
       const response = await getAllApplications(1, 100);
 
-      const mapped = response.items.map(mapApplicant);
+      const mapped = response.items.map((item, idx) => mapApplicant(item, idx, rankMap));
 
       const unique = Array.from(
         new Map(mapped.map((a) => [a.applicantId, a])).values()

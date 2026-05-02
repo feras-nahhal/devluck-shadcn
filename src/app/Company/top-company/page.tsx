@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useMemo,useEffect } from "react";
 import DashboardLayout from "@/components/Company/DashboardLayout";
 import { useTopCompanyHandler } from "@/hooks/companyapihandler/useTopCompanyHandler";
+import { useCompanyGlobalRankingHandler } from "@/hooks/common/useCompanyGlobalRankingHandler";
 import { Clock, File, FileText, PauseCircle, PlayCircle} from 'lucide-react';
 import { motion } from "framer-motion";
 import {SyncLoader } from "react-spinners";
@@ -20,6 +21,7 @@ import { toast } from "sonner";
 import { DataTable } from "@/components/common/DataTable";
 import { StatsCardSkeleton } from "@/components/common/Skeleton/StatsCardSkeleton";
 import { CompanyCardSkeleton } from "@/components/common/Skeleton/CompanyCardSkeleton";
+import { TopCompany } from "@/types/company";
 
 
 export default function TopCompanyPage() {
@@ -34,14 +36,14 @@ export default function TopCompanyPage() {
     return text.length > max ? text.slice(0, max) + "..." : text;
   };
   //hook
-  const { topCompanies, loading, error, getTopCompanies} = useTopCompanyHandler();
+  const { rankings, listCompanyGlobalRankings,loading ,error} = useCompanyGlobalRankingHandler();
   //useEffect
   useEffect(() => {
-    getTopCompanies(1, 100, searchQuery).catch((err) => {
+    listCompanyGlobalRankings({ page: 1, limit: 100, search: searchQuery }).catch((err) => {
       console.error('Failed to load top companies:', err);
       toast.error("Failed to load top companies");
     });
-  }, [getTopCompanies, searchQuery]);
+  }, [listCompanyGlobalRankings, searchQuery]);
 
   useEffect(() => {
     const updateItemsPerPage = () => {
@@ -57,6 +59,24 @@ export default function TopCompanyPage() {
   }, []);
   //filter
   const filteredCompanies = useMemo(() => {
+    const topCompanies: TopCompany[] = rankings.map((item) => ({
+      id: item.company.id,
+      name: item.company.name,
+      logo: item.company.logo,
+      image: item.company.logo,
+      phoneNumber: null,
+      address: null,
+      addresses: [],
+      status: item.company.status,
+      industry: item.company.industry,
+      location: item.company.location,
+      website: item.company.website,
+      size: item.company.size,
+      employeeNumber: 0,
+      opportunityCount: 0,
+      contractsCount: Math.round(item.contractsScore ?? 0),
+      globalRank: item.globalRank
+    }));
     if (!searchQuery.trim()) {
       return topCompanies;
     }
@@ -64,12 +84,12 @@ export default function TopCompanyPage() {
     return topCompanies.filter(company =>
       company.name?.toLowerCase().includes(searchLower) ||
       company.id?.toLowerCase().includes(searchLower) ||
-      company.phoneNumber?.toLowerCase().includes(searchLower) ||
-      company.address?.toLowerCase().includes(searchLower) ||
+      String(company.phoneNumber || "").toLowerCase().includes(searchLower) ||
+      String(company.address || "").toLowerCase().includes(searchLower) ||
       company.location?.toLowerCase().includes(searchLower) ||
       (company.addresses && company.addresses.some(addr => addr.address?.toLowerCase().includes(searchLower)))
     );
-  }, [topCompanies, searchQuery]);
+  }, [rankings, searchQuery]);
 // 📄 Pagination
   const totalPages = Math.ceil(filteredCompanies.length / itemsPerPage);
   const paginatedCompanies = filteredCompanies.slice(
@@ -101,14 +121,14 @@ export default function TopCompanyPage() {
     setCurrentPage(1);
   }, [searchQuery]);
 
-  const totalCompanies = topCompanies.length;
-  const verifiedCompanies = topCompanies.filter(
+  const totalCompanies = filteredCompanies.length;
+  const verifiedCompanies = filteredCompanies.filter(
     (company) => company.status === "Verified"
   ).length;
-  const pendingCompanies = topCompanies.filter(
+  const pendingCompanies = filteredCompanies.filter(
     (company) => company.status === "Pending"
   ).length;
-  const totalEmployees = topCompanies.reduce(
+  const totalEmployees = filteredCompanies.reduce(
     (sum, company) => sum + (company.employeeNumber || 0),
     0
   );
@@ -162,6 +182,14 @@ export default function TopCompanyPage() {
   // Define columns for DataTable
 
   const columns = [
+    {
+      header: "Rank",
+      cell: (company: any) => (
+        <span className="text-xs font-semibold">
+          {typeof company.globalRank === "number" ? `#${company.globalRank}` : "N/A"}
+        </span>
+      ),
+    },
     {
       header: "ID",
       cell: (company: any) => (
@@ -322,7 +350,7 @@ export default function TopCompanyPage() {
               <ErrorState
                 title="Failed to load companies"
                 description={error || "We couldn’t fetch companies. Please try again."}
-                onRetry={() => getTopCompanies()}
+                onRetry={() => listCompanyGlobalRankings({ page: 1, limit: 100, search: searchQuery })}
               />
             )}
 
