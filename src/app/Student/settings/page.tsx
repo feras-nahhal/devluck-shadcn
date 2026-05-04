@@ -143,8 +143,8 @@ export default function SettingsPage() {
                       </p>
 
                       <Button
-                        variant="destructive"
                         onClick={() => setShowDeleteConfirm(true)}
+                        className="bg-destructive/90 hover:bg-destructive/80"
                       >
                         Delete Profile
                       </Button>
@@ -256,8 +256,8 @@ export default function SettingsPage() {
                         {/* DELETE */}
                         <Button
                           size="sm"
-                          variant="destructive"
                           onClick={() => setDeleteId(item.id)}
+                          className="bg-destructive/90 hover:bg-destructive/80"
                         >
                           Delete
                         </Button>

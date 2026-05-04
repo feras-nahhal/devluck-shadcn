@@ -20,7 +20,7 @@ export default function NotificationPage() {
                     transition={{ duration: 0.5 }}
                     >
                     <DecryptedText
-                        text="Notification"
+                        text="Notifications"
                         speed={40}
                         maxIterations={20}
                         className="revealed"

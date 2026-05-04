@@ -155,7 +155,7 @@ export default function TopUniversityPage() {
               transition={{ duration: 0.5 }}
             >
               <DecryptedText
-                text="Universities"
+                text="Top Universities"
                 speed={40}
                 maxIterations={20}
                 className="revealed"
@@ -323,19 +323,21 @@ export default function TopUniversityPage() {
               },
               {
                 header: "University Name",
-                cell: (u: University) => u.name,
+                cell: (u: University) => u.name ?? "N/A",
               },
-              {
-                header: "Phone Number",
-                cell: (u: University) => u.phoneNumber,
-              },
-              {
-                header: "Address",
-                cell: (u: University) => u.address,
-              },
+                {
+                  header: "Phone",
+                  cell: (u: University) =>
+                    u.phoneNumber?.trim() ? u.phoneNumber : "N/A",
+                },
+                {
+                  header: "Address",
+                  cell: (u: University) =>
+                    u.address?.trim() ? u.address : "N/A",
+                },
               {
                 header: "World Ranking",
-                cell: (u: University) => u.qsWorldRanking,
+                cell: (u: University) => u.qsWorldRanking ?? "N/A",
               },
             ]}
             getId={(u) => u.id}

@@ -31,6 +31,7 @@ import {
   HomeIcon,
   MapIcon,
   MapPin,
+  DollarSign,
 } from "lucide-react";
 import { InfoItem } from "../common/info-item";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -40,14 +41,11 @@ export interface TopApplicant {
   id: string;
   name: string;
   image?: string | null;
-  description?: string | null;
   profileRanking?: number | null;
   profileComplete?: number | null;
   email?: string | null;
   availability?: string | null;
-  status?: string | null;
   salaryExpectation?: number | null;
-  applicationCount: number;
 }
 
 type Props = {
@@ -57,7 +55,6 @@ type Props = {
 
 export function TopApplicantCard({ applicant, onClick }: Props) {
   return (
-    <Dialog>
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -70,12 +67,15 @@ export function TopApplicantCard({ applicant, onClick }: Props) {
 
             {/* LEFT TOP (ID + STATUS) */}
             <div className="absolute left-1 top-1 z-10 flex flex-col gap-1">
-              <div className="flex items-center gap-1 bg-black/40 text-white px-2 py-0.5 rounded-md text-[10px] backdrop-blur">
-                <Fingerprint className="h-2.5 w-2.5" />
+              <div className="flex items-center gap-1 bg-black/40 text-white px-2 py-0.5 rounded-md text-[12px] backdrop-blur">
+                <Fingerprint className="h-3 w-3" />
                 {(applicant.id|| "").slice(0, 6)}
               </div>
-
-
+            </div>
+            {/* RIGHT TOP (RANK) */}
+            <div className="absolute right-1 top-1 z-10 flex items-center gap-1 bg-primary/20 text-primary px-2 py-0.5 rounded-md text-[12px] backdrop-blur">
+              <Trophy className="h-3 w-3" />
+              {applicant.profileRanking || "N/A"}
             </div>
 
           {/* AVATAR */}
@@ -112,9 +112,9 @@ export function TopApplicantCard({ applicant, onClick }: Props) {
                 icon={<MapPin className="h-3.5 w-3.5" />}
               />
               <InfoItem
-                label="Ranking"
-                value={`${applicant.profileRanking || "N/A"}`}
-                icon={<Trophy className="h-3.5 w-3.5" />}
+                label="Expected Salary"
+                value={applicant.salaryExpectation ? `$${applicant.salaryExpectation}` : "N/A"}
+                icon={<DollarSign className="h-3.5 w-3.5" />}
                 highlight
               />
             </div>
@@ -122,73 +122,14 @@ export function TopApplicantCard({ applicant, onClick }: Props) {
 
           {/* FOOTER */}
           <CardFooter className="p-0 pt-0">
-            <DialogTrigger asChild>
-              <Button className="w-full justify-between">
-                Quick View
+              <Button
+              onClick={() => onClick?.(applicant)}
+               className="w-full justify-between">
+                View Full Profile
                 <Eye className="h-4 w-4" />
               </Button>
-            </DialogTrigger>
           </CardFooter>
         </Card>
       </motion.div>
-
-      {/* ================= OVERLAY ================= */}
-      <DialogContent className="w-[92vw] sm:max-w-lg rounded-2xl p-4 sm:p-6 mx-auto">
-
-        {/* REQUIRED FOR RADIX (fixes console error) */}
-        <VisuallyHidden>
-          <DialogTitle>{applicant.name}</DialogTitle>
-        </VisuallyHidden>
-
-        {/* HEADER */}
-        <div className="mb-4">
-          <h2 className="text-xl font-bold">{applicant.name}</h2>
-          <p className="text-sm text-muted-foreground">
-            Full applicant overview
-          </p>
-        </div>
-
-        {/* GRID */}
-        <div className="grid grid-cols-2 gap-3 text-sm">
-
-          <div className="p-3 rounded-lg bg-muted col-span-2">
-            <p className="text-muted-foreground">Ranking</p>
-            <p className="font-medium">
-              #{applicant.profileRanking ?? 0}
-            </p>
-          </div>
-
-          <div className="p-3 rounded-lg bg-muted col-span-2">
-            <p className="text-muted-foreground">Salary</p>
-            <p className="font-medium">
-              {applicant.salaryExpectation
-                ? `$${applicant.salaryExpectation}`
-                : "Not specified"}
-            </p>
-          </div>
-
-          <div className="p-3 rounded-lg bg-muted col-span-2">
-            <p className="text-muted-foreground">Availability</p>
-            <p className="font-medium">
-              {applicant.availability ?? "Unknown"}
-            </p>
-          </div>
-
-          <div className="p-3 rounded-lg bg-muted col-span-2">
-            <p className="text-muted-foreground">Description</p>
-            <p className="text-sm">
-              {applicant.description || "No description available"}
-            </p>
-          </div>
-        </div>
-
-        {/* ACTION */}
-        <Button className="w-full justify-between cursor-pointer" onClick={() => onClick?.(applicant)}>
-          View Full Profile
-          <Eye className="h-4 w-4" />
-        </Button>
-
-      </DialogContent>
-    </Dialog>
   );
 }

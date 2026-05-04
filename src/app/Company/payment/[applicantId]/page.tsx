@@ -393,7 +393,7 @@ return (
                   cell: (row: Payment) => (
                     <div className="flex flex-col">
                       <span className="text-sm font-semibold">
-                        {row.nextPayment}
+                        {row.nextPayment || "N/A"}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         Payment Date
@@ -407,7 +407,7 @@ return (
                   cell: (row: Payment) => (
                     <div className="flex flex-col">
                       <span className="text-sm font-semibold">
-                        {row.monthlyAllowance}
+                        {row.monthlyAllowance || "N/A"}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         Monthly Allowance
@@ -421,7 +421,7 @@ return (
                   cell: (row: Payment) => (
                     <div className="flex flex-col">
                       <span className="text-sm font-semibold">
-                        {row.transferId}
+                        {row.transferId || "N/A"}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         Transfer ID
@@ -430,26 +430,14 @@ return (
                   ),
                 },
 
-                {
-                  header: "Note",
-                  cell: (row: Payment) => (
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold">
-                        {row.note}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Note
-                      </span>
-                    </div>
-                  ),
-                },
+
 
                 {
                   header: "Status",
                   cell: (row: Payment) => (
                     <div
                       className={cn(
-                        "px-3 py-1 rounded text-xs font-semibold w-fit",
+                        "px-3 py-1 rounded-full text-xs font-semibold w-fit",
                         row.paymentStatus === "Paid" &&
                           "bg-[#D3FCD2] text-[#22C55E]",
                         row.paymentStatus === "Due" &&
@@ -458,7 +446,20 @@ return (
                           "bg-[#FFF4CC] text-[#F59E0B]"
                       )}
                     >
-                      {row.paymentStatus}
+                      {row.paymentStatus || "N/A"}
+                    </div>
+                  ),
+                },
+                                {
+                  header: "Note",
+                  cell: (row: Payment) => (
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold">
+                        {row.note || "N/A"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Note
+                      </span>
                     </div>
                   ),
                 },

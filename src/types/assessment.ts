@@ -8,6 +8,7 @@ export type AssessmentStatus =
   | "not_started"
   | "in_progress"
   | "evaluating"
+  | "expired"
   | "completed";
 
 export interface AssessmentOpportunity {

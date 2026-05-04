@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Loader2, LogOut } from "lucide-react";
+import { Trash2, Loader2, LogOut, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ConfirmWithdrawDialogProps {
@@ -32,39 +32,38 @@ export function ConfirmWithdrawDialog({
 }: ConfirmWithdrawDialogProps) {
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-[400px] gap-0 overflow-hidden rounded-[28px] border-border bg-card p-0 shadow-2xl">
-        <AlertDialogHeader className="flex flex-col items-center justify-center px-8 pb-8 pt-10">
+      <AlertDialogContent className="w-[calc(100%-32px)] max-w-[420px] overflow-hidden rounded-3xl border-border bg-card p-6 shadow-2xl">
+        {/* HEADER */}
+        <AlertDialogHeader className="flex flex-col items-center">
           
           {/* ICON CONTAINER: Using OKLCH Destructive with Opacity */}
-          <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 mx-auto">
-            <LogOut className="h-7 w-7 text-amber-500" strokeWidth={1.5} />
+          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10">
+            <XCircle className="h-8 w-8 text-destructive" strokeWidth={1.5} />
           </div>
 
-          <div className="space-y-3 text-center">
-            <AlertDialogTitle className="text-[20px] font-bold tracking-tight text-foreground">
-              {title}?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-[14px] font-medium leading-relaxed text-muted-foreground">
-              {description.split("Settings").map((part, i, arr) => (
-                <React.Fragment key={i}>
-                  {part}
-                  {i < arr.length - 1 && (
-                    <span className="text-foreground underline cursor-pointer font-bold hover:text-primary transition-colors">
-                      Settings
-                    </span>
-                  )}
-                </React.Fragment>
-              ))}
-            </AlertDialogDescription>
-          </div>
+          <AlertDialogTitle className="text-center text-[20px] font-bold tracking-tight text-foreground">
+            {title}?
+          </AlertDialogTitle>
+
+          <AlertDialogDescription className="mt-2 text-center text-[14px] leading-relaxed text-muted-foreground">
+            {description.split("Settings").map((part, i, arr) => (
+              <React.Fragment key={i}>
+                {part}
+                {i < arr.length - 1 && (
+                  <span className="font-semibold text-foreground underline cursor-pointer hover:text-primary transition-colors">
+                    Settings
+                  </span>
+                )}
+              </React.Fragment>
+            ))}
+          </AlertDialogDescription>
         </AlertDialogHeader>
 
         {/* ACTION AREA: Using muted backgrounds from your theme */}
-        <div className="flex flex-row items-center gap-3 border-t border-border bg-muted/30 px-6 py-6">
+        <div className="flex gap-3 bg-muted/20 ">
           <AlertDialogCancel
             disabled={isWithdraw}
-            className="m-0 h-11 flex-1 rounded-xl border border-border bg-card text-sm font-bold text-foreground transition-all hover:bg-muted focus:ring-0 cursor-pointer"
-          >
+            className="h-11 flex-1 rounded-xl border border-border bg-background text-sm font-semibold text-foreground transition hover:bg-muted focus:ring-0"          >
             Cancel
           </AlertDialogCancel>
 
@@ -75,8 +74,9 @@ export function ConfirmWithdrawDialog({
             }}
             disabled={isWithdraw}
             className={cn(
-              "m-0 h-11 flex-1 rounded-xl border-none text-sm font-bold transition-all shadow-none focus:ring-0 cursor-pointer",
-              "bg-destructive/10 text-destructive hover:bg-destructive"
+              "h-11 flex-1 rounded-xl text-sm font-semibold transition focus:ring-0",
+              "bg-destructive/90  hover:bg-destructive/80",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           >
             {isWithdraw ? (

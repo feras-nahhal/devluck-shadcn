@@ -22,6 +22,7 @@ import { mapApplicant } from "@/lib/mappers/applicant.mapper";
 import { Applicant, ApplicantStatus } from "@/types/applicant";
 import { Pagination } from "@/components/common/Pagination";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useGlobalRankingHandler } from "@/hooks/common/useGlobalRankingHandler";
 import { Badge } from "@/components/ui/badge";
 import { useCompanyAssessmentHandler } from "@/hooks/companyapihandler/useCompanyAssessmentHandler";
 import { useCompanyInterviewHandler } from "@/hooks/companyapihandler/useCompanyInterviewHandler";
@@ -104,33 +105,37 @@ export default function JobDetailPage() {
   
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [bulkUpdating, setBulkUpdating] = useState(false);
-  
-   const handleBulkStatusChange = async (
-    newStatus: "pending" | "accepted" | "rejected"
-  ) => {
-    if (selectedIds.length === 0) return;
-  
-    setBulkUpdating(true);
-  
-    try {
-      await Promise.all(
-        selectedIds.map((id) => updateApplicationStatus(id, newStatus))
-      );
-  
-      const response = await getApplicationsForOpportunity(jobId as string, 1, 100);
-  
-      const transformedApplicants = response.items.map((app, index) =>
-        mapApplicant(app, index)
-      );
-  
-      setApplicants(transformedApplicants);
-      setSelectedIds([]);
-    } catch (error) {
-      console.error("Bulk status update failed", error);
-    } finally {
-      setBulkUpdating(false);
-    }
-  };
+    const [rankMap, setRankMap] = useState<Record<string, number>>({});
+    const rankingHandler = useGlobalRankingHandler();
+    const listStudentGlobalRankings = rankingHandler.listStudentGlobalRankings;
+
+    const handleBulkStatusChange = async (newStatus: "pending" | "accepted" | "rejected") => {
+      if (selectedIds.length === 0) return;
+
+      setBulkUpdating(true);
+
+      try {
+        // ✅ FRESH RANKINGS
+        const rankingData = await listStudentGlobalRankings({ page: 1, limit: 1000 });
+        const rankingLookup = rankingData.items.reduce((acc, row) => {
+          acc[row.studentId] = row.globalRank;
+          return acc;
+        }, {} as Record<string, number>);
+
+        await Promise.all(selectedIds.map((id) => updateApplicationStatus(id, newStatus)));
+        const response = await getApplicationsForOpportunity(jobId as string, 1, 100);
+        const transformedApplicants = response.items.map((app, index) =>
+          mapApplicant(app, index, rankingLookup)
+        );
+
+        setApplicants(transformedApplicants);
+        setSelectedIds([]);
+      } catch (error) {
+        console.error("Bulk status update failed", error);
+      } finally {
+        setBulkUpdating(false);
+      }
+    };
   
     const { jobId } = useParams();
     const router = useRouter();
@@ -217,25 +222,36 @@ export default function JobDetailPage() {
     useEffect(() => {
       const fetchApplicants = async () => {
         if (!jobId) return;
-  
+
         try {
+          // ✅ 1. FETCH RANKINGS
+          const rankingData = await listStudentGlobalRankings({ page: 1, limit: 1000 });
+          const rankingLookup = rankingData.items.reduce((acc, row) => {
+            acc[row.studentId] = row.globalRank;
+            return acc;
+          }, {} as Record<string, number>);
+
+          // ✅ 2. FETCH APPLICATIONS
           const response = await getApplicationsForOpportunity(
             jobId as string,
             1,
             100
           );
-  
-          const transformedApplicants = response.items.map(mapApplicant);
-  
+
+          // ✅ 3. MAP WITH RANKINGS
+          const transformedApplicants = response.items.map((app, index) => 
+            mapApplicant(app, index, rankingLookup)
+          );
+
           setApplicants(transformedApplicants);
         } catch (error) {
           console.error("Failed to fetch applicants:", error);
           setApplicants([]);
         }
       };
-  
+
       fetchApplicants();
-    }, [jobId, getApplicationsForOpportunity]);
+    }, [jobId, getApplicationsForOpportunity]); // ✅ Stable deps only
   
     const handleStatusChange = async (
       applicationId: string,
@@ -246,15 +262,19 @@ export default function JobDetailPage() {
         if (newStatus === "accepted") {
           openPostAcceptFlow(applicationId);
         }
-  
-        const response = await getApplicationsForOpportunity(
-          jobId as string,
-          1,
-          100
+
+        // ✅ REFRESH WITH RANKINGS
+        const rankingData = await listStudentGlobalRankings({ page: 1, limit: 1000 });
+        const rankingLookup = rankingData.items.reduce((acc, row) => {
+          acc[row.studentId] = row.globalRank;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const response = await getApplicationsForOpportunity(jobId as string, 1, 100);
+        const transformedApplicants = response.items.map((app, index) =>
+          mapApplicant(app, index, rankingLookup)
         );
-  
-        const transformedApplicants = response.items.map(mapApplicant);
-  
+
         setApplicants(transformedApplicants);
       } catch (error) {
         console.error("Failed to update application status:", error);
@@ -757,7 +777,7 @@ const assessmentContent = (
                            return (
                              <span
                                className={cn(
-                                 "px-3 py-1 rounded text-xs font-semibold",
+                                 "px-3 py-1 rounded-full text-xs font-semibold",
                                  status === "accepted" && "bg-green-100 text-green-700",
                                  status === "rejected" && "bg-red-100 text-red-700",
                                  status === "pending" && "bg-yellow-100 text-yellow-700"

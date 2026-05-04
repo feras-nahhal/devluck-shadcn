@@ -88,8 +88,7 @@ export function SelectionBar1({
 
               <Button
                 size="sm"
-                variant="destructive"
-                className="gap-2"
+                className="bg-destructive/90 hover:bg-destructive/80 gap-2"
                 onClick={onReject}
               >
                 <XCircle className="w-4 h-4" />

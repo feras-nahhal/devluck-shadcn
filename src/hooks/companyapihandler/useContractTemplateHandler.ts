@@ -112,10 +112,6 @@ const isContractStatus = (v: string): v is ContractStatus =>
 
 const normalize = (dto: ContractTemplateDTO): ContractTemplate => {
   if (!dto.id) throw new Error("ContractTemplate missing id");
-  if (!dto.name) throw new Error("ContractTemplate missing name");
-  if (!dto.contractTitle) {
-    throw new Error("ContractTemplate missing contractTitle");
-  }
 
   const workLocationRaw = dto.workLocation ?? "";
   const statusRaw = dto.status ?? "";
@@ -134,8 +130,10 @@ const normalize = (dto: ContractTemplateDTO): ContractTemplate => {
 
   return {
     id: dto.id,
-    name: dto.name,
-    contractTitle: dto.contractTitle,
+
+    // ✅ FIX: fallback values
+    name: dto.name?.trim() || "⚠ Add template name",
+    contractTitle: dto.contractTitle?.trim() || "⚠ Add contract title",
 
     currency: dto.currency ?? "USD",
     duration: dto.duration ?? "-",

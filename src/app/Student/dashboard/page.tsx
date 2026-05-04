@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OpportunityDashbordCard } from "@/components/Student/OpportunityDashbordCard";
+import { StatsCardSkeleton } from "@/components/common/Skeleton/StatsCardSkeleton";
 
 
 export default function DashboardPage() {
@@ -114,6 +115,7 @@ export default function DashboardPage() {
           getExperiences(),
           getEducations(),
           getSkills(),
+          getPortfolios(),
           listOpportunities(1, 4),
           getDashboardStats()
         ]);
@@ -148,7 +150,7 @@ export default function DashboardPage() {
       }
     };
     fetchData();
-  }, [getProfile, getExperiences, getEducations, getSkills, listOpportunities, getDashboardStats, getStudentReviews, getUpcomingInterviews]);
+  }, [getProfile, getExperiences, getEducations, getSkills, getPortfolios, listOpportunities, getDashboardStats, getStudentReviews, getUpcomingInterviews]); 
 
   const mappedOpportunities = useMemo(() => {
     if (!opportunities || !Array.isArray(opportunities)) {
@@ -186,11 +188,12 @@ export default function DashboardPage() {
   const totalRejected = stats?.totalRejected ?? 0;
   const upcomingInterviews = interviews.length;
 
-  const isLoading =
+const isLoading =
   profileLoading ||
   experienceLoading ||
   educationLoading ||
   skillsLoading ||
+  portfolioLoading ||
   opportunitiesLoading ||
   statsLoading;
 
@@ -223,15 +226,15 @@ export default function DashboardPage() {
   }, [opportunities, checkApplicationExists]);
 
   const opportunitiesStats = useMemo(() => {
-    const formatValue = (val: number) =>
-      opportunitiesLoading ? (
-        <SyncLoader size={8} color="#D4AF37" />
-      ) : (
-        <span className={val === 0 ? "text-muted-foreground" : ""}>
-          {val.toString()}
+    const formatValue = (val?: number) => {
+      const safeValue = val ?? 0;
+
+      return (
+        <span className={safeValue === 0 ? "text-muted-foreground" : ""}>
+          {safeValue}
         </span>
       );
-
+    };
     return [
       {
         key: "all",
@@ -267,7 +270,6 @@ export default function DashboardPage() {
       },
     ];
   }, [
-    opportunitiesLoading,
     totalOpportunities,
     totalApplied,
     totalRejected,
@@ -422,7 +424,7 @@ export default function DashboardPage() {
           {/* FRAME 254 */}
           <div className="flex flex-col lg:flex-row gap-6 w-full">
 
-            <Card className="p-0 rounded-2xl border shadow-sm">
+            <Card className=" flex-[8] flex p-0 rounded-2xl border shadow-sm">
               <div className="p-4 sm:p-6 lg:p-8">
 
                 {/* ================= HEADER ================= */}
@@ -529,7 +531,7 @@ export default function DashboardPage() {
 
                 {/* ================= DESCRIPTION ================= */}
                 <div className="mt-6">
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-sm text-muted-foreground leading-relaxed break-words whitespace-pre-wrap line-clamp-4">
                     {profile?.description || "Applicant description not found."}
                   </p>
                 </div>
@@ -553,24 +555,28 @@ export default function DashboardPage() {
 
             {/* RIGHT SIDE - STATS GRID */}
             <div className="
-              flex-1
+              flex-[4]
               grid
               grid-cols-1 sm:grid-cols-2
               gap-4
               auto-rows-fr
             ">
 
-            {opportunitiesStats.map((stat) => (
-              <StatsCard
-                key={stat.key}
-                title={stat.title}
-                value={stat.value}
-                subtitle={stat.subtitle}
-                icon={stat.icon}
-                iconColor={stat.iconColor}
-                className="h-full"
-              />
-            ))}
+            {opportunitiesLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <StatsCardSkeleton key={i} />
+                ))
+              : opportunitiesStats.map((stat) => (
+                  <StatsCard
+                    key={stat.key}
+                    title={stat.title}
+                    value={stat.value}
+                    subtitle={stat.subtitle}
+                    icon={stat.icon}
+                    iconColor={stat.iconColor}
+                    className="h-full"
+                  />
+                ))}
 
             </div>
 
@@ -580,13 +586,13 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row w-full gap-10 sm:gap-15 mt-10 ">
 
           {/* Frame 266 */}
-          <div className="flex-[8] flex flex-col gap-6 px-4 sm:px-0  ">
+          <div className="flex-[8]">
                   {/* Skills Parallelogram Card */}
-                  <div className="flex flex-col items-center justify-center gap-10">
+                  <div className="flex flex-col items-center justify-center gap-6">
                     {/* Row 1 */}
-                    <div className=" grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+                    <div className=" grid grid-cols-1 lg:grid-cols-2 gap-10 w-full">
                         {/* EXPERIENCE */}
-                        <Card className="w-full sm:max-w-[360px] sm:min-w-[340px] rounded-2xl shadow-sm flex flex-col max-h-[260px]">
+                        <Card className="w-full sm:max-w-[400px] sm:min-w-[380px] rounded-2xl shadow-sm flex flex-col max-h-[260px]">
 
                           {/* HEADER */}
                           <CardHeader className="pb-2">
@@ -663,7 +669,7 @@ export default function DashboardPage() {
 
                         </Card>
                         {/* EDUCATION */}
-                        <Card className="w-full sm:max-w-[360px] sm:min-w-[340px] rounded-2xl shadow-sm flex flex-col max-h-[260px]">
+                        <Card className="w-full sm:max-w-[400px] sm:min-w-[380px] rounded-2xl shadow-sm flex flex-col max-h-[260px]">
 
                           {/* HEADER */}
                           <CardHeader className="pb-2">
@@ -742,9 +748,9 @@ export default function DashboardPage() {
                       </div>
             
                     {/* Row 2 */}
-                    <div className=" grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+                    <div className=" grid grid-cols-1 lg:grid-cols-2 gap-10 w-full">
                       {/* SKILLS */}
-                      <Card className="w-full sm:max-w-[360px] sm:min-w-[340px]  shadow-sm rounded-2xl flex flex-col max-h-[300px]">
+                      <Card className="w-full sm:max-w-[400px] sm:min-w-[380px]  shadow-sm rounded-2xl flex flex-col max-h-[260px]">
 
                         {/* HEADER */}
                         <CardHeader className="pb-2">
@@ -784,7 +790,7 @@ export default function DashboardPage() {
                       </Card>
 
                       {/* Portfolio Card */}
-                      <Card className="rounded-2xl w-full sm:max-w-[360px] sm:min-w-[340px]  shadow-sm border  flex flex-col max-h-[300px]">
+                      <Card className="rounded-2xl w-full sm:max-w-[400px] sm:min-w-[380px]  shadow-sm border  flex flex-col max-h-[260px]">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-lg font-semibold">Portfolio</CardTitle>
                         </CardHeader>
@@ -835,11 +841,11 @@ export default function DashboardPage() {
 
                     </div>
                     {/* Row 3 */}
-                    <div className=" grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+                    <div className=" grid grid-cols-1 lg:grid-cols-2 gap-10 w-full">
 
 
                       {/* ───────────────────── REVIEWS ───────────────────── */}
-                      <Card className="rounded-2xl sm:max-w-[360px] sm:min-w-[340px] shadow-sm border max-h-[300px] flex flex-col">
+                      <Card className="rounded-2xl sm:max-w-[400px] sm:min-w-[380px] shadow-sm border max-h-[260px] flex flex-col">
 
                         {/* HEADER */}
                         <CardHeader className="flex flex-row items-center justify-between">
@@ -912,7 +918,7 @@ export default function DashboardPage() {
                       </Card>
 
                       {/* Upcoming Interviews Card */}
-                        <Card className="w-full sm:max-w-[360px] sm:min-w-[340px] rounded-2xl shadow-sm border flex flex-col max-h-[300px]">
+                        <Card className="w-full sm:max-w-[400px] sm:min-w-[380px] rounded-2xl shadow-sm border flex flex-col max-h-[260px]">
 
                           <CardHeader className="pb-2">
                             <CardTitle className="text-lg font-semibold">

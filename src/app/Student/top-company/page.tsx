@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from "react";
 import DashboardLayout from "@/components/Student/DashboardLayout";
 import { useTopCompanyHandler} from "@/hooks/companyapihandler/useTopCompanyHandler";
 import { useCompanyGlobalRankingHandler } from "@/hooks/common/useCompanyGlobalRankingHandler";
-import { Clock, File, FileText, PauseCircle, PlayCircle} from 'lucide-react';
+import { Clock, File, FileText, PauseCircle, PlayCircle, Trophy} from 'lucide-react';
 import { motion } from "framer-motion";
 import { SyncLoader } from "react-spinners";
 import DecryptedText from "@/components/ui/DecryptedText";
@@ -47,9 +47,18 @@ export default function TopCompanyPage() {
       name: item.company.name,
       logo: item.company.logo,
       image: item.company.logo,
-      phoneNumber: null,
-      address: null,
-      addresses: [],
+      phoneNumber:
+        item.company.phoneNumber ||
+        item.company.addresses.find((addr) => addr.phoneNumber)?.phoneNumber ||
+        null,
+      address: item.company.address,
+      addresses: item.company.addresses.map((addr) => ({
+        id: addr.id,
+        name: addr.name ?? undefined,
+        tag: addr.tag ?? undefined,
+        address: addr.address ?? undefined,
+        phoneNumber: addr.phoneNumber ?? undefined
+      })),
       status: item.company.status,
       industry: item.company.industry,
       location: item.company.location,
@@ -201,7 +210,7 @@ const [itemsPerPage, setItemsPerPage] = useState(10); // default 10 for desktop
                     transition={{ duration: 0.5 }}
                   >
                     <DecryptedText
-                      text="Top Company"
+                      text="Top Companies"
                       speed={40}
                       maxIterations={20}
                       className="revealed"
@@ -326,11 +335,7 @@ const [itemsPerPage, setItemsPerPage] = useState(10); // default 10 for desktop
                     router.push(`/Student/top-company/${c.id}`),
                 }}
                 columns={[
-                  {
-                    header: "Rank",
-                    cell: (c: TopCompany) =>
-                      typeof c.globalRank === "number" ? `#${c.globalRank}` : "N/A",
-                  },
+
                   {
                     header: "ID",
                     cell: (c: TopCompany) =>
@@ -339,6 +344,18 @@ const [itemsPerPage, setItemsPerPage] = useState(10); // default 10 for desktop
                   {
                     header: "Name",
                     cell: (c: TopCompany) => c.name,
+                  },
+                  {
+                    header: "Rank",
+                    cell: (c: TopCompany) =>
+                      typeof c.globalRank === "number" ? (
+                        <div className="flex items-center gap-1">
+                          <Trophy className="h-3.5 w-3.5" />
+                          {c.globalRank}
+                        </div>
+                      ) : (
+                        "N/A"
+                      ),
                   },
                   {
                     header: "Phone",
@@ -359,13 +376,13 @@ const [itemsPerPage, setItemsPerPage] = useState(10); // default 10 for desktop
                         className={cn(
                           "px-2 py-1 rounded-md text-xs font-medium",
                           c.status === "Verified" &&
-                            "bg-green-100 text-green-700 border border-green-300",
+                            "bg-green-100 text-green-700 ",
                           c.status === "Pending" &&
-                            "bg-yellow-100 text-yellow-700 border border-yellow-300",
+                            "bg-yellow-100 text-yellow-700 ",
                           (!c.status ||
                             (c.status !== "Verified" &&
                               c.status !== "Pending")) &&
-                            "bg-gray-100 text-gray-600 border border-gray-300"
+                            "bg-gray-100 text-gray-600 "
                         )}
                       >
                         {c.status || "N/A"}

@@ -257,13 +257,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
               onChange={(e) => handleInputChange("name", e.target.value)}
             />
 
-            <ParallelogramInput
-              label="Email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChange={(e) => handleInputChange("email", e.target.value)}
-            />
-
             <ParallelogramSelect
               label="Availability"
               placeholder="Select availability"

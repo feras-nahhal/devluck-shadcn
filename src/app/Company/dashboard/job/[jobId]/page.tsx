@@ -14,7 +14,7 @@ import { SearchAndViewBar } from "@/components/common/SearchAndViewBar";
 import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { EmptyState } from "@/components/common/EmptyState";
-
+import { useGlobalRankingHandler } from "@/hooks/common/useGlobalRankingHandler";
 import { DataTable } from "@/components/common/DataTable";
 import { cn } from "@/lib/utils";
 import { Applicant, ApplicantStatus } from "@/types/applicant";
@@ -36,25 +36,33 @@ export default function JobDetailPage() {
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkUpdating, setBulkUpdating] = useState(false);
-
-   const handleBulkStatusChange = async (
+  const [rankMap, setRankMap] = useState<Record<string, number>>({});
+  const { listStudentGlobalRankings } = useGlobalRankingHandler();
+  const handleBulkStatusChange = async (
     newStatus: "pending" | "accepted" | "rejected"
   ) => {
     if (selectedIds.length === 0) return;
-  
+
     setBulkUpdating(true);
-  
+
     try {
+      // ✅ GET FRESH RANKINGS
+      const rankingData = await listStudentGlobalRankings({ page: 1, limit: 1000 });
+      const rankingLookup = rankingData.items.reduce((acc, row) => {
+        acc[row.studentId] = row.globalRank;
+        return acc;
+      }, {} as Record<string, number>);
+
       await Promise.all(
         selectedIds.map((id) => updateApplicationStatus(id, newStatus))
       );
-  
+
       const response = await getApplicationsForOpportunity(jobId as string, 1, 100);
-  
+
       const transformedApplicants = response.items.map((app, index) =>
-        mapApplicant(app, index)
+        mapApplicant(app, index, rankingLookup)  // ← Pass rankingLookup
       );
-  
+
       setApplicants(transformedApplicants);
       setSelectedIds([]);
     } catch (error) {
@@ -98,47 +106,72 @@ export default function JobDetailPage() {
       if (!jobId) return;
 
       try {
+        // 1. ✅ FETCH RANKINGS FIRST
+        const rankingData = await listStudentGlobalRankings({ page: 1, limit: 1000 });
+        
+        // 2. ✅ CREATE RANK LOOKUP
+        const rankingLookup = rankingData.items.reduce((acc, row) => {
+          acc[row.studentId] = row.globalRank;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        setRankMap(rankingLookup);
+
+        // 3. ✅ FETCH APPLICATIONS
         const response = await getApplicationsForOpportunity(
           jobId as string,
           1,
           100
         );
 
-        const transformedApplicants = response.items.map(mapApplicant);
+        // 4. ✅ MAP WITH RANKINGS
+        const transformedApplicants = response.items.map((app, index) => 
+          mapApplicant(app, index, rankingLookup)
+        );
 
         setApplicants(transformedApplicants);
       } catch (error) {
         console.error("Failed to fetch applicants:", error);
+        toast.error("Failed to load applicants");
         setApplicants([]);
       }
     };
 
     fetchApplicants();
-  }, [jobId, getApplicationsForOpportunity]);
+  }, [jobId, getApplicationsForOpportunity]); // ✅ FIXED: Only stable deps
 
-    const handleStatusChange = async (
-      applicationId: string,
-      newStatus: ApplicantStatus
-    ) => {
-      try {
-        await updateApplicationStatus(applicationId, newStatus);
-        if (newStatus === "accepted") {
-          openPostAcceptFlow(applicationId);
-        }
-  
-        const response = await getApplicationsForOpportunity(
-          jobId as string,
-          1,
-          100
-        );
-  
-        const transformedApplicants = response.items.map(mapApplicant);
-  
-        setApplicants(transformedApplicants);
-      } catch (error) {
-        console.error("Failed to update application status:", error);
+  const handleStatusChange = async (
+    applicationId: string,
+    newStatus: ApplicantStatus
+  ) => {
+    try {
+      await updateApplicationStatus(applicationId, newStatus);
+      if (newStatus === "accepted") {
+        openPostAcceptFlow(applicationId);
       }
-    };
+
+      // ✅ REFRESH WITH RANKINGS
+      const rankingData = await listStudentGlobalRankings({ page: 1, limit: 1000 });
+      const rankingLookup = rankingData.items.reduce((acc, row) => {
+        acc[row.studentId] = row.globalRank;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const response = await getApplicationsForOpportunity(
+        jobId as string,
+        1,
+        100
+      );
+
+      const transformedApplicants = response.items.map((app, index) =>
+        mapApplicant(app, index, rankingLookup)  // ← Pass rankingLookup
+      );
+
+      setApplicants(transformedApplicants);
+    } catch (error) {
+      console.error("Failed to update application status:", error);
+    }
+  };
 
   const filteredApplicants = useMemo(() => {
     if (!searchQuery.trim()) return applicants;
@@ -384,7 +417,7 @@ const candidatesContent = (
                         return (
                           <span
                             className={cn(
-                              "px-3 py-1 rounded text-xs font-semibold",
+                              "px-3 py-1 rounded-full text-xs font-semibold",
                               status === "accepted" && "bg-green-100 text-green-700",
                               status === "rejected" && "bg-red-100 text-red-700",
                               status === "pending" && "bg-yellow-100 text-yellow-700"

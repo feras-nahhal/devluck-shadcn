@@ -56,17 +56,17 @@ import { useAuth } from "@/hooks/useAuth"
 
 const navItems = [
   { name: "Dashboard", path: "/Company/dashboard", icon: LayoutDashboard },
-  { name: "Opportunity", path: "/Company/opportunity", icon: Briefcase },
-  { name: "Applicant", path: "/Company/applicant", icon: Users },
-  { name: "Contract List", path: "/Company/contract-list", icon: FileText },
-  { name: "Template", path: "/Company/contract-template", icon: FileCode },
+  { name: "Opportunities", path: "/Company/opportunity", icon: Briefcase },
+  { name: "Applicants", path: "/Company/applicant", icon: Users },
+  { name: "Contracts", path: "/Company/contract-list", icon: FileText },
+  { name: "Contract Templates", path: "/Company/contract-template", icon: FileCode },
   { name: "Profile", path: "/Company/profile", icon: UserCircle },
-  { name: "Payment", path: "/Company/payment", icon: CreditCard },
+  { name: "Payments", path: "/Company/payment", icon: CreditCard },
   { name: "Subscription", path: "/Company/subscription", icon: Settings },
-  { name: "Top Applicant", path: "/Company/top-applicant", icon: Trophy  },
-  { name: "Top Company", path: "/Company/top-company", icon: Building2 },
-  { name: "Top University", path: "/Company/top-university", icon: GraduationCap },
-  { name: "Notification", path: "/Company/notification", icon: Bell },
+  { name: "Top Applicants", path: "/Company/top-applicant", icon: Trophy  },
+  { name: "Top Companies", path: "/Company/top-company", icon: Building2 },
+  { name: "Top Universities", path: "/Company/top-university", icon: GraduationCap },
+  { name: "Notifications", path: "/Company/notification", icon: Bell },
   { name: "Settings", path: "/Company/settings", icon: Settings },
 ] as const;
 

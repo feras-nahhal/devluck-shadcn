@@ -643,14 +643,14 @@ return [
     {
         header: "Period",
         cell: (a: MappedContract) =>
-          `${a.startDate} — ${a.endDate}`,
+          `${a.startDate ?? "N/A"} — ${a.endDate ?? "N/A"}`,
       },
 
       {
         header: "Status",
         cell: (a: MappedContract) => {
           const statusClass = cn(
-            "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ",
+            "px-3 py-1 rounded-full text-xs font-semibold",
             a.contractStatus === "Running" &&
               "bg-green-500/10 text-green-600 ",
             a.contractStatus === "Completed" &&
@@ -659,7 +659,7 @@ return [
               "bg-red-500/10 text-red-600 "
           );
 
-          return <span className={statusClass}>{a.contractStatus}</span>;
+          return <span className={statusClass}>{a.contractStatus ||"N/A"}</span>;
         },
       },
   ]}

@@ -52,19 +52,19 @@ import { useAuth } from "@/hooks/useAuth"
 
 const navItems = [
   { name: "Dashboard", path: "/Student/dashboard", icon: LayoutDashboard },
-  { name: "Opportunity", path: "/Student/opportunity", icon: Briefcase },
+  { name: "Opportunities", path: "/Student/opportunity", icon: Briefcase },
   {
-    name: "Applied Opportunity",
+    name: "Applied Opportunities",
     path: "/Student/applied-Opportunity",
     icon: CheckCircle,
   },
   { name: "Profile", path: "/Student/profile", icon: User },
   { name: "Contracts", path: "/Student/contract", icon: FileText },
-  { name: "Top10 Student", path: "/Student/top-student", icon: Trophy },
-  { name: "Top Company", path: "/Student/top-company", icon: Building2 },
-  { name: "Top University", path: "/Student/top-university", icon: GraduationCap },
   { name: "Assessments", path: "/Student/assessments", icon: ClipboardCheck },
-  { name: "Notification", path: "/Student/notification", icon: Bell },
+  { name: "Top Students", path: "/Student/top-student", icon: Trophy },
+  { name: "Top Companies", path: "/Student/top-company", icon: Building2 },
+  { name: "Top Universities", path: "/Student/top-university", icon: GraduationCap },
+  { name: "Notifications", path: "/Student/notification", icon: Bell },
   { name: "Settings", path: "/Student/settings", icon: Settings },
 ] as const;
 

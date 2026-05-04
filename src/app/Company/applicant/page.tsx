@@ -481,11 +481,11 @@ function mapApplicant(app: any, index: number, ranks: Record<string, number>): A
                     },
                     {
                       header: "Name",
-                      cell: (a: any) => a.name,
+                      cell: (a: any) => a.name ?? "N/A",
                     },
                     {
                       header: "Email",
-                      cell: (a: any) => a.email,
+                      cell: (a: any) => a.email ?? "N/A",
                     },
                     {
                       header: "Applied Date",

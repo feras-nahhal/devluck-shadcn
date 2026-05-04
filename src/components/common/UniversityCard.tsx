@@ -133,19 +133,19 @@ export function UniversityCard({
 
         {/* CONTENT - flex-1 pushes the footer down */}
         <CardContent className="space-y-2">
-          <CardDescription className="text-sm leading-relaxed line-clamp-2  px-2 ">
+          <CardDescription className="text-sm leading-relaxed line-clamp-2 px-2 min-h-[2.5rem]">
             {university.description || "No description available"}
           </CardDescription>
 
           <div className="space-y-2 ">
             <InfoItem
               label="Location"
-              value={university.address || "No address"}
+              value={university.address || "No address added"}
               icon={<MapPin className="h-4 w-4" />}
             />
             <InfoItem
               label="Phone number"
-              value={university.phoneNumber || "No phone"}
+              value={university.phoneNumber || "No phone number added"}
               icon={<Phone className="h-4 w-4" />}
             />
           </div>

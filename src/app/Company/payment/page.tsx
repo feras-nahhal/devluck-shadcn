@@ -297,7 +297,7 @@ return (
               transition={{ duration: 0.5 }}
             >
               <DecryptedText
-                text="Payment"
+                text="Payments"
                 speed={40}
                 maxIterations={20}
                 className="revealed"

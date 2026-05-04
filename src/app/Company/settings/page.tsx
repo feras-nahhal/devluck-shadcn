@@ -132,7 +132,7 @@ export default function SettingsPage() {
                 </span>
 
                 <Button
-                  variant="destructive"
+                  className="bg-destructive/90 hover:bg-destructive/80"
                   onClick={() => setShowDeleteConfirm(true)}
                 >
                   Delete Profile

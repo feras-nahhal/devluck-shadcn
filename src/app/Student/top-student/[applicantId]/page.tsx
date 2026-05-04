@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { LoadingState } from "@/components/common/LoadingState";
 import EmptyStateFeedback from "@/components/common/EmptyStateFeedback";
 import ReviewModal from "@/components/Student/Modal/ReviewModal";
+import { useAuth } from "@/hooks/useAuth";
 export default function ApplicantPage() {
   const truncateTextFlex = (
     text: string | null | undefined,
@@ -32,6 +33,9 @@ export default function ApplicantPage() {
   const { applicantId } = params;
   const { student: applicant, loading, error, getTopStudentById } = useTopStudentsHandler();
   const { ranking: applicantRanking, getStudentGlobalRankingByStudentId } = useGlobalRankingHandler();
+
+  const { user } = useAuth();
+  const isOwnProfile = user?.email === applicant?.email;
 
   useEffect(() => {
     if (applicant?.id) {
@@ -499,6 +503,7 @@ export default function ApplicantPage() {
               {/* RIGHT SIDE */}
               <Button
                 size="sm"
+                disabled={isOwnProfile}
                 onClick={() => {
                   setEditingReviews(null);
                   setIsModalOpen(true);

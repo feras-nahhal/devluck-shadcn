@@ -77,7 +77,7 @@ export function CompanyCard({
             {typeof company.globalRank === "number" && (
               <div className="flex items-center gap-1 bg-primary/80 text-primary-foreground px-2 py-0.5 rounded-md text-[12px] backdrop-blur">
                 <Trophy className="h-3 w-3" />
-                {`${company.globalRank}`}
+                {`${company.globalRank || "N/A"}`}
               </div>
             )}
           </div>
@@ -119,7 +119,13 @@ export function CompanyCard({
 
               <InfoItem
                 label="Phone number"
-                value={company.phoneNumber|| "No Phonenumber"}
+                value={
+                  company.phoneNumber ||
+                  (company.addresses?.length
+                    ? company.addresses[0]?.phoneNumber
+                    : null) ||
+                  "No Phonenumber"
+                }
                 icon={<Phone className="h-3.5 w-3.5" />}
                 highlight
               />

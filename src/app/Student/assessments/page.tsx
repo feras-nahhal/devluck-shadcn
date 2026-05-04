@@ -22,14 +22,21 @@ import React from "react";
 import { AssessmentCardSkeleton } from "@/components/Student/Skeleton/AssessmentCardSkeleton";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
-import { AssessmentItem } from "@/types/assessment";
+import { AssessmentItem, AssessmentStatus } from "@/types/assessment";
 import { toast } from "sonner";
 import SyncLoader from "react-spinners/SyncLoader";
 
 
 type TabMode = "all" | "public" | "private";
-
-const FILTER_STATUSES = ["all", "pending", "completed"];
+type FilterStatus = AssessmentStatus | "all";
+const FILTER_STATUSES: FilterStatus[] = [  // ✅ Explicitly type as FilterStatus[]
+  "all",
+  "not_started",
+  "in_progress",
+  "evaluating",
+  "completed",
+  "expired"
+];
 
 export default function StudentAssessmentsPage() {
   const router = useRouter();
@@ -47,7 +54,8 @@ export default function StudentAssessmentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(["all"]);
+  const [selectedStatuses, setSelectedStatuses] = useState<FilterStatus[]>(["all"]);
+
 
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -62,7 +70,10 @@ export default function StudentAssessmentsPage() {
     let mounted = true;
 
     const load = async () => {
-
+      setSelectedStatuses(["all"]);
+      setSearchQuery("");
+      setCurrentPage(1);
+      
       setLoading(true);
       setError(null);
 
@@ -83,7 +94,6 @@ export default function StudentAssessmentsPage() {
             : "Failed to fetch assessments";
 
         setError(message);
-
         toast.error(message);
       } finally {
         if (mounted) setLoading(false);
@@ -99,32 +109,33 @@ export default function StudentAssessmentsPage() {
 
   const normalizedItems = useMemo(() => {
     return items.map((item) => {
+      // Use the actual assessment status instead of simplified cardStatus
       const status = String(
-        item.sessionStatus || item.assessmentStatus || ""
-      ).toLowerCase();
-
-      const completed =
-        item.hasReport ||
-        reportEligibleStatuses.has(status);
+        item.sessionStatus || item.assessmentStatus || "not_started"
+      ).toLowerCase() as AssessmentStatus;
 
       return {
         ...item,
-        cardStatus: completed ? "completed" : "pending",
+        // Keep original status for filtering, add cardStatus only for display if needed
+        assessmentStatus: status,
+        cardStatus: reportEligibleStatuses.has(status) ? "completed" : "pending", // Keep for cards
       };
     });
   }, [items]);
 
   const filteredItems = useMemo(() => {
-    return normalizedItems.filter((item) => {
+    return normalizedItems.filter((item: any) => { // ✅ Add 'any' type for safety
       const title = item.opportunity?.title || "Assessment";
 
       const matchesSearch = title
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
 
+      // ✅ Safe status check with fallback
+      const itemStatus = (item.assessmentStatus ?? "not_started") as AssessmentStatus;
       const matchesStatus =
         selectedStatuses.includes("all") ||
-        selectedStatuses.includes(item.cardStatus);
+        selectedStatuses.includes(itemStatus);
 
       return matchesSearch && matchesStatus;
     });
@@ -149,22 +160,28 @@ export default function StudentAssessmentsPage() {
     (_, i) => i + 1
   );
 
-  const toggleStatus = (status: string) => {
-    setCurrentPage(1);
+const toggleStatus = (status: FilterStatus) => {  // ✅ Change parameter type
+  setCurrentPage(1);
 
-    if (status === "all") {
-      setSelectedStatuses(["all"]);
-      return;
-    }
+  if (status === "all") {
+    setSelectedStatuses(["all"]);
+    return;
+  }
 
+  if (selectedStatuses.includes("all")) {
+    setSelectedStatuses([status]);  // ✅ Remove 'as AssessmentStatus'
+  } else {
     let updated = selectedStatuses.includes(status)
       ? selectedStatuses.filter((x) => x !== status)
-      : [...selectedStatuses.filter((x) => x !== "all"), status];
+      : [...selectedStatuses, status];
 
-    if (updated.length === 0) updated = ["all"];
-
-    setSelectedStatuses(updated);
-  };
+    if (updated.length === 0) {
+      setSelectedStatuses(["all"]);
+    } else {
+      setSelectedStatuses(updated);  // ✅ Remove 'as AssessmentStatus[]'
+    }
+  }
+};
 
   const goToPage = (page: number) =>
     setCurrentPage(page);
@@ -262,6 +279,21 @@ export default function StudentAssessmentsPage() {
     );
   };
 
+  const statusClasses: Record<AssessmentStatus, string> = {
+  not_started: "bg-muted text-muted-foreground ",
+  in_progress: "bg-yellow-500/10 text-yellow-600 ",
+  evaluating: "bg-blue-500/10 text-blue-600 ",
+  completed: "bg-green-500/10 text-green-600 ",
+  expired: "bg-red-500/10 text-red-600 ",
+  };
+  const statusLabels: Record<AssessmentStatus, string> = {
+    not_started: "Not Started",
+    in_progress: "In Progress",
+    evaluating: "Evaluating",
+    completed: "Completed",
+    expired: "Expired",
+  };
+
   return (
     <DashboardLayout>
       <div className="px-4 sm:px-6 lg:px-6 py-6 space-y-8">
@@ -288,7 +320,7 @@ export default function StudentAssessmentsPage() {
               </p>
             </div>
 
-            {/* STATS */}
+           {/* STATS */}
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {loading
                 ? Array.from({ length: 4 }).map((_, i) => (
@@ -303,27 +335,46 @@ export default function StudentAssessmentsPage() {
                       color: "#3B82F6",
                     },
                     {
-                      title: "Pending",
-                      value: formatValue(grouped.pending.length),
-                      subtitle: "Need action",
+                      title: "In Progress",
+                      value: formatValue(
+                        items.filter((x) => {
+                          const status = String(
+                            x.sessionStatus || x.assessmentStatus || ""
+                          ).toLowerCase();
+                          return status === "in_progress";
+                        }).length
+                      ),
+                      subtitle: "Currently active",
                       icon: <Clock3 className="h-5 w-5" />,
                       color: "#F59E0B",
                     },
                     {
                       title: "Completed",
-                      value: formatValue(grouped.done.length),
+                      value: formatValue(
+                        items.filter((x) => {
+                          const status = String(
+                            x.sessionStatus || x.assessmentStatus || ""
+                          ).toLowerCase();
+                          return status === "completed";
+                        }).length
+                      ),
                       subtitle: "Finished tests",
                       icon: <CheckCircle2 className="h-5 w-5" />,
                       color: "#10B981",
                     },
                     {
-                      title: "Private Invites",
+                      title: "Expired",
                       value: formatValue(
-                        items.filter((x) => x.source === "private").length
+                        items.filter((x) => {
+                          const status = String(
+                            x.sessionStatus || x.assessmentStatus || ""
+                          ).toLowerCase();
+                          return status === "expired";
+                        }).length
                       ),
-                      subtitle: "Exclusive access",
+                      subtitle: "Time expired",
                       icon: <Lock className="h-5 w-5" />,
-                      color: "#8B5CF6",
+                      color: "#EF4444",
                     },
                   ].map((stat, i) => (
                     <motion.div
@@ -366,7 +417,7 @@ export default function StudentAssessmentsPage() {
           </TabsList>
         </Tabs>
 
-        {/* SEARCH / FILTER */}
+        {/* SEARCH / FILTER - ✅ Fixed: Remove statusLabels prop */}
         <SearchAndFilterAndViewBar
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -442,28 +493,29 @@ export default function StudentAssessmentsPage() {
                   {
                     header: "Type",
                     cell: (row: any) => (
-                      <Badge variant="outline">
-                        {row.source === "private"
-                          ? "Private"
-                          : "Public"}
+                      <Badge
+                        variant="outline"
+                        className={
+                          row.source === "private"
+                            ? "bg-muted text-muted-foreground border-border"
+                            : "bg-primary/10 text-primary border-primary/20"
+                        }
+                      >
+                        {row.source === "private" ? "Private" : "Public"}
                       </Badge>
                     ),
                   },
                   {
                     header: "Status",
-                    cell: (row: any) => (
-                      <Badge variant="secondary">
-                        {row.assessmentStatus || "not_started"}
-                      </Badge>
-                    ),
-                  },
-                  {
-                    header: "Session",
-                    cell: (row: any) => (
-                      <span className="capitalize text-sm text-muted-foreground">
-                        {row.sessionStatus || "-"}
-                      </span>
-                    ),
+                    cell: (row: any) => {
+                      const status = (row.assessmentStatus ?? "not_started") as AssessmentStatus;
+
+                      return (
+                        <Badge className={statusClasses[status]}>
+                          {statusLabels[status]}
+                        </Badge>
+                      );
+                    },
                   },
                   {
                     header: "Report",

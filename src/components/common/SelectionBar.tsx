@@ -84,8 +84,8 @@ export function SelectionBar({
                 onClick={onDeleteClick}
                 className={cn(
                   "h-10 px-5 rounded-xl gap-2.5 font-black text-[10px] uppercase tracking-widest transition-all",
-                  "bg-destructive hover:bg-destructive/90",
-                  "shadow-[0_4px_12px_oklch(var(--destructive)/0.2)] hover:shadow-[0_8px_20px_oklch(var(--destructive)/0.3)] hover:scale-[1.02] cursor-pointer",
+                  "bg-destructive/90 hover:bg-destructive/80",
+                  "hover:scale-[1.02] cursor-pointer",
                   "active:scale-95"
                 )}
               >

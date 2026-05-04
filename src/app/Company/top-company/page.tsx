@@ -5,7 +5,7 @@ import { useState, useMemo,useEffect } from "react";
 import DashboardLayout from "@/components/Company/DashboardLayout";
 import { useTopCompanyHandler } from "@/hooks/companyapihandler/useTopCompanyHandler";
 import { useCompanyGlobalRankingHandler } from "@/hooks/common/useCompanyGlobalRankingHandler";
-import { Clock, File, FileText, PauseCircle, PlayCircle} from 'lucide-react';
+import { Clock, File, FileText, PauseCircle, PlayCircle, Trophy} from 'lucide-react';
 import { motion } from "framer-motion";
 import {SyncLoader } from "react-spinners";
 import DecryptedText from "@/components/ui/DecryptedText";
@@ -64,9 +64,18 @@ export default function TopCompanyPage() {
       name: item.company.name,
       logo: item.company.logo,
       image: item.company.logo,
-      phoneNumber: null,
-      address: null,
-      addresses: [],
+      phoneNumber:
+        item.company.phoneNumber ||
+        item.company.addresses.find((addr) => addr.phoneNumber)?.phoneNumber ||
+        null,
+      address: item.company.address,
+      addresses: item.company.addresses.map((addr) => ({
+        id: addr.id,
+        name: addr.name ?? undefined,
+        tag: addr.tag ?? undefined,
+        address: addr.address ?? undefined,
+        phoneNumber: addr.phoneNumber ?? undefined
+      })),
       status: item.company.status,
       industry: item.company.industry,
       location: item.company.location,
@@ -183,14 +192,6 @@ export default function TopCompanyPage() {
 
   const columns = [
     {
-      header: "Rank",
-      cell: (company: any) => (
-        <span className="text-xs font-semibold">
-          {typeof company.globalRank === "number" ? `#${company.globalRank}` : "N/A"}
-        </span>
-      ),
-    },
-    {
       header: "ID",
       cell: (company: any) => (
         <span className="text-xs font-medium">
@@ -209,6 +210,19 @@ export default function TopCompanyPage() {
         </span>
       ),
     },
+                      {
+                    header: "Rank",
+                    cell: (c: TopCompany) =>
+                      typeof c.globalRank === "number" ? (
+                        <div className="flex items-center gap-1">
+                          <Trophy className="h-3.5 w-3.5" />
+                          {c.globalRank}
+                        </div>
+                      ) : (
+                        "N/A"
+                      ),
+                  },
+
     {
       header: "Phone",
       cell: (company: any) => {
@@ -245,7 +259,7 @@ export default function TopCompanyPage() {
       cell: (company: any) => (
         <span
           className={cn(
-            "text-xs inline-flex px-2 py-0.5 rounded-md font-medium",
+            "px-3 py-1 rounded-full text-xs font-semibold",
             company.status === "Verified" &&
               "bg-green-100 text-green-700",
             company.status === "Pending" &&
@@ -274,7 +288,7 @@ export default function TopCompanyPage() {
               transition={{ duration: 0.5 }}
             >
               <DecryptedText
-                text="Top Company"
+                text="Top Companies"
                 speed={40}
                 maxIterations={20}
                 className="revealed"

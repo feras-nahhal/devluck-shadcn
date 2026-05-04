@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/Company/DashboardLayout";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect} from "react";
 import { useUniversityHandler } from "@/hooks/companyapihandler/useUniversityHandler";
-import {ArrowLeft, Fingerprint, Mail, MapPin, Phone} from "lucide-react";
+import {ArrowLeft, Fingerprint, Mail, MapPin, Phone, Trophy} from "lucide-react";
 import { LoadingState } from "@/components/common/LoadingState";
 import EmptyStateFeedback from "@/components/common/EmptyStateFeedback";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -144,8 +144,9 @@ const COLORS = ["#3b82f6", "#a855f7"];
                                 {university?.id?.slice(-6)}
                             </Badge>
 
-                            <Badge variant="outline">
-                            QS Rank: #{university?.qsWorldRanking ?? "N/A"}
+                            <Badge  className="flex items-center gap-1">
+                            <Trophy className="w-3.5 h-3.5" />
+                            QS Rank: {university?.qsWorldRanking ?? "N/A"}
                             </Badge>
 
                             <Badge variant="outline">
@@ -181,17 +182,17 @@ const COLORS = ["#3b82f6", "#a855f7"];
 
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <MapPin className="w-4 h-4" />
-                        <span className="truncate">{university?.address}</span>
+                        <span className="truncate">{university?.address || "No address available"}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <Phone className="w-4 h-4" />
-                        <span className="truncate">{university?.phoneNumber}</span>
+                        <span className="truncate">{university?.phoneNumber || "No phone number available"}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <Mail className="w-4 h-4" />
-                        <span className="truncate">{university?.email}</span>
+                        <span className="truncate">{university?.email || "No email available"}</span>
                     </div>
 
                     </CardContent>
@@ -251,9 +252,10 @@ const COLORS = ["#3b82f6", "#a855f7"];
                           </p>
                           </div>
   
-                          <div className="text-xl font-bold">
-                          #{r.value ?? "N/A"}
-                          </div>
+                        <div className="flex items-center gap-1 text-xl font-bold text-primary">
+                        <Trophy className="h-4 w-4" />
+                        {r.value ?? "N/A"}
+                        </div>
                       </div>
                       ))}
   

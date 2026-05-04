@@ -95,7 +95,7 @@ export default function ApplicantPage() {
               transition={{ duration: 0.5 }}
             >
               <DecryptedText
-                text="Top students"
+                text="Top Students"
                 speed={40}
                 maxIterations={20}
                 className="revealed"
@@ -159,9 +159,6 @@ export default function ApplicantPage() {
                       profileRanking: row.globalRank,
                       profileComplete: row.student.profileComplete,
                       salaryExpectation: row.student.salaryExpectation,
-                      description: null,
-                      status: null,
-                      applicationCount: 0
                     }}
                     onClick={() =>
                       router.push(`/Student/top-student/${row.student.id}`)

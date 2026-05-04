@@ -85,33 +85,33 @@ export default function ContractTemplatePage() {
         {
           header: "Template Name",
           cell: (c: ContractTemplate) => (
-            <div className="text-sm font-medium">{c.name}</div>
+            <div className="text-sm font-medium">{c.name ||"N/A"}</div>
           ),
         },
         {
           header: "Allowance",
           cell: (c: ContractTemplate) => (
             <div className="text-sm">
-              {c.monthlyAllowance} {c.currency}
+              {c.monthlyAllowance ||"N/A"} {c.currency}
             </div>
           ),
         },
         {
           header: "Duration",
           cell: (c: ContractTemplate) => (
-            <div className="text-sm">{c.duration}</div>
+            <div className="text-sm">{c.duration  ||"N/A"}</div>
           ),
         },
         {
           header: "Location",
           cell: (c: ContractTemplate) => (
-            <div className="text-sm">{c.workLocation}</div>
+            <div className="text-sm">{c.workLocation  ||"N/A"}</div>
           ),
         },
         {
           header: "Title",
           cell: (c: ContractTemplate) => (
-            <div className="text-sm">{c.contractTitle}</div>
+            <div className="text-sm">{c.contractTitle ||"N/A"}</div>
           ),
         },
         {
@@ -119,7 +119,7 @@ export default function ContractTemplatePage() {
           cell: (c: ContractTemplate) => (
             <span
               className={cn(
-                "text-xs px-2 py-1 rounded-md font-medium",
+                "px-3 py-1 rounded-full text-xs font-semibold",
                 c.status === "Active"
                   ? "bg-green-100 text-green-700"
                   : c.status === "Inactive"
@@ -127,7 +127,7 @@ export default function ContractTemplatePage() {
                   : "bg-blue-100 text-blue-600"
               )}
             >
-              {c.status}
+              {c.status  ||"N/A"}
             </span>
           ),
         },

@@ -12,6 +12,15 @@ export interface RankingCompanySummary {
   size: string | null
   foundedYear: number | null
   location: string | null
+  address: string | null
+  phoneNumber: string | null
+  addresses: Array<{
+    id: string
+    name: string | null
+    tag: string | null
+    address: string | null
+    phoneNumber: string | null
+  }>
 }
 
 export interface CompanyGlobalRanking {

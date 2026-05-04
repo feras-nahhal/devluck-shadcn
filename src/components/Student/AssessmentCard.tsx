@@ -18,7 +18,7 @@ import {
   Lock,
   Globe,
 } from "lucide-react";
-import { AssessmentItem } from "@/types/assessment";
+import { AssessmentItem, AssessmentStatus } from "@/types/assessment";
 
 interface AssessmentCardProps {
   item: AssessmentItem;
@@ -59,6 +59,14 @@ export function AssessmentCard({
 
   const icon = getIcon();
 
+  const statusClasses: Record<AssessmentStatus, string> = {
+  not_started: "bg-muted text-muted-foreground ",
+  in_progress: "bg-yellow-500/10 text-yellow-600 ",
+  evaluating: "bg-blue-500/10 text-blue-600 ",
+  completed: "bg-green-500/10 text-green-600 ",
+  expired: "bg-red-500/10 text-red-600 ",
+  };
+
   return (
     <Card className="rounded-2xl border shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
 
@@ -85,8 +93,9 @@ export function AssessmentCard({
               )}
             </CardDescription>
           </div>
-
-          <Badge variant="secondary" className="capitalize">
+          <Badge
+            className={`capitalize ${statusClasses[status as AssessmentStatus]}`}
+          >
             {status || "not_started"}
           </Badge>
         </div>
