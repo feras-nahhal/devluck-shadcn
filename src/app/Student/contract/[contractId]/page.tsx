@@ -23,6 +23,7 @@ import { LoadingState } from "@/components/common/LoadingState";
 import EmptyStateFeedback from "@/components/common/EmptyStateFeedback";
 import { ContractDescriptionComponent } from "@/components/Student/ContractDescriptionComponent";
 import ContractExtrasCard from "@/components/Student/ContractExtrasCard";
+import ContractReportCard from "@/components/Student/ContractExtrasCard";
 
 export default function contractDetailPage() {
   const [review, setReview] = useState("");
@@ -242,6 +243,9 @@ export default function contractDetailPage() {
 
                         </CardContent>
                       </Card>
+                    </div>
+                    <div className="w-full">
+                      <ContractReportCard />
                     </div>
                     <div className="w-full">
                       <Card>

@@ -114,7 +114,7 @@ const [formData, setFormData] = useState<OpportunityData>({
   const [questionCountOptions, setQuestionCountOptions] = useState<number[]>([5, 10]);
   const [timeLengthValue, setTimeLengthValue] = useState("");
   const [timeLengthUnit, setTimeLengthUnit] = useState<TimeLengthUnit>("days");
-
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
     const router = useRouter();
  /* ──────────────────────────────────────────────
      LOAD EDIT DATA
@@ -174,6 +174,7 @@ const [formData, setFormData] = useState<OpportunityData>({
   }, [id]);
 
   const handleChange = (key: keyof OpportunityData, value: any) => {
+    setTouched((prev) => ({ ...prev, [key]: true }));
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -211,6 +212,17 @@ const [formData, setFormData] = useState<OpportunityData>({
   }, [getSubscriptionStatus]);
   /* ---------------- SUBMIT (CREATE + EDIT) ---------------- */
     const handleSubmit = async () => {
+      setTouched({
+        title: true,
+        type: true,
+        location: true,
+        currency: true,
+        allowance: true,
+        startDate: true,
+        timeLength: true,
+        description: true,
+      });
+      if (!validateForm()) return;
     try {
         console.log("SUBMIT:", formData);
         const payload: any = { ...formData };
@@ -259,7 +271,33 @@ const [formData, setFormData] = useState<OpportunityData>({
         toast.error("Failed to save opportunity");
     }
     };
-
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const validateForm = () => {
+      const newErrors: Record<string, string> = {};
+      if (!formData.title.trim()) newErrors.title = "Title is required";
+      if (!formData.type) newErrors.type = "Type is required";
+      if (!formData.location) newErrors.location = "Location is required";
+      if (!formData.currency) newErrors.currency = "Currency is required";
+      if (!formData.allowance) newErrors.allowance = "Allowance is required";
+      if (!formData.startDate) newErrors.startDate = "Start date is required";
+      if (!timeLengthValue) newErrors.timeLength = "Duration is required";
+      if (!formData.description.trim())
+        newErrors.description = "Description is required";
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+    useEffect(() => {
+      validateForm();
+    }, [formData, timeLengthValue]);
+    const isFormValid =
+    formData.title.trim() &&
+    formData.type &&
+    formData.location &&
+    formData.currency &&
+    formData.allowance &&
+    formData.startDate &&
+    timeLengthValue &&
+    formData.description.trim();
   return (
       <DashboardLayout>
     <div className="max-w-5xl mx-auto p-6 space-y-6">
@@ -278,6 +316,7 @@ const [formData, setFormData] = useState<OpportunityData>({
             label="Title"
             placeholder="Opportunity title"
             value={formData.title}
+            error={touched.title ? errors.title : ""}
             onChange={(e) => handleChange("title", e.target.value)}
           />
 
@@ -285,6 +324,7 @@ const [formData, setFormData] = useState<OpportunityData>({
             label="Type"
             placeholder="Select type"
             value={formData.type}
+            error={touched.type ? errors.type : ""}
             options={["Full-time", "Part-time", "Internship"]}
             onChange={(v) => handleChange("type", v)}
           />
@@ -293,6 +333,7 @@ const [formData, setFormData] = useState<OpportunityData>({
             label="Location"
             placeholder="Select location"
             value={formData.location || ""}
+            error={touched.location ? errors.location : ""}
             options={["Remote", "Hybrid", "Onsite"]}
             onChange={(v) => handleChange("location", v)}
           />
@@ -301,6 +342,7 @@ const [formData, setFormData] = useState<OpportunityData>({
             label="Currency"
             placeholder="Select currency"
             value={formData.currency}
+            error={touched.currency ? errors.currency : ""}
             options={["USD", "EUR", "SAR"]}
             onChange={(v) => handleChange("currency", v)}
           />
@@ -308,6 +350,7 @@ const [formData, setFormData] = useState<OpportunityData>({
           <ParallelogramInput
             label="Allowance"
             placeholder="Salary / stipend"
+            error={touched.allowance ? errors.allowance : ""}
             value={formData.allowance || ""}
             onChange={(e) => handleChange("allowance", e.target.value)}
           />
@@ -315,29 +358,42 @@ const [formData, setFormData] = useState<OpportunityData>({
           <DatePickerField
             label="Start Date"
             value={formData.startDate || ""}
+            error={touched.startDate ? errors.startDate : ""}
             onChange={(v) => handleChange("startDate", v)}
           />
 
                     {/* Inputs */}
+        <div className="space-y-1">
           <div className="flex gap-2">
             <Input
               type="number"
               min="1"
               placeholder="Time Length"
               value={timeLengthValue}
-              onChange={(e) =>
-                handleTimeLengthChange(e.target.value, timeLengthUnit)
+              onChange={(e) => {
+                setTouched((prev) => ({ ...prev, timeLength: true }));
+                handleTimeLengthChange(e.target.value, timeLengthUnit);
+              }}
+              className={
+                touched.timeLength && errors.timeLength ? "border-red-500" : ""
               }
             />
+
             <Select
               value={timeLengthUnit}
-              onValueChange={(val: TimeLengthUnit) =>
-                handleTimeLengthChange(timeLengthValue, val)
-              }
+              onValueChange={(val: TimeLengthUnit) => {
+                setTouched((prev) => ({ ...prev, timeLength: true }));
+                handleTimeLengthChange(timeLengthValue, val);
+              }}
             >
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger
+                className={`w-[160px] ${
+                  touched.timeLength && errors.timeLength ? "border-red-500" : ""
+                }`}
+              >
                 <SelectValue placeholder="Unit" />
               </SelectTrigger>
+
               <SelectContent>
                 <SelectItem value="days">Days</SelectItem>
                 <SelectItem value="weeks">Weeks</SelectItem>
@@ -346,6 +402,11 @@ const [formData, setFormData] = useState<OpportunityData>({
               </SelectContent>
             </Select>
           </div>
+
+          {touched.timeLength && errors.timeLength && (
+            <p className="text-xs text-red-500">{errors.timeLength}</p>
+          )}
+        </div>
           
         </div>
 
@@ -354,6 +415,7 @@ const [formData, setFormData] = useState<OpportunityData>({
           label="Description"
           placeholder="Opportunity description"
           value={formData.description}
+          error={touched.description ? errors.description : ""}
           type="textarea"
           onChange={(e) => handleChange("description", e.target.value)}
         />
@@ -407,7 +469,13 @@ const [formData, setFormData] = useState<OpportunityData>({
           )}
         </div>
 
-      <Button onClick={handleSubmit} disabled={loading} className="w-full">
+      <Button
+        onClick={handleSubmit}
+        disabled={loading || !isFormValid}
+        className={`w-full transition-all ${
+          !isFormValid ? "opacity-50 cursor-not-allowed" : ""
+        }`}
+      >
         {loading
           ? "Saving..."
           : formData.id

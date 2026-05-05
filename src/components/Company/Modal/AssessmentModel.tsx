@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
-
+import { useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -246,6 +246,32 @@ const AssessmentModal: React.FC<Props> = ({
   const [questions, setQuestions] = useState<AssessmentQuestion[]>([]);
   const [expandedDimension, setExpandedDimension] = useState<string | null>(null);
   const [deadlineInput, setDeadlineInput] = useState("72");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [isFormValid, setIsFormValid] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const validateForm = useCallback((data: AssessmentData): { isValid: boolean; errors: Record<string, string> } => {
+    const newErrors: Record<string, string> = {};
+      if (data.dimensions.length === 0) newErrors.dimensions = "At least one assessment dimension is required";
+      if (!data.roleType?.trim()) newErrors.roleType = "Role type is required";
+      if (!data.companyStyle) newErrors.companyStyle = "Company style is required";
+      if (data.assessmentDeadlineHours <= 0 || data.assessmentDeadlineHours > 720) newErrors.assessmentDeadlineHours = "Deadline must be between 1-720 hours";
+      if (data.numberOfQuestions <= 0 || data.numberOfQuestions > 100) newErrors.numberOfQuestions = "Number of questions must be between 1-100";
+
+      const isValid = Object.keys(newErrors).length === 0;
+      return { isValid, errors: newErrors };
+  }, []);
+
+  const triggerValidation = useCallback((data: AssessmentData) => {
+      if (validationTimeoutRef.current) clearTimeout(validationTimeoutRef.current);
+      validationTimeoutRef.current = setTimeout(() => {
+        const result = validateForm(data);
+        setErrors(result.errors);
+        setIsFormValid(result.isValid);
+      }, 100);
+    }, [validateForm]);
 
   useEffect(() => {
     if (assessment) setFormData(assessment);
@@ -260,8 +286,38 @@ const AssessmentModal: React.FC<Props> = ({
     setDeadlineInput(Number.isFinite(value) && value > 0 ? String(value) : "72");
   }, [formData.assessmentDeadlineHours]);
 
+  useEffect(() => {
+    if (isOpen) {
+      if (assessment) {
+        setFormData(assessment);
+        setTouched({});
+        setTimeout(() => {
+          const result = validateForm(assessment);
+          setErrors(result.errors);
+          setIsFormValid(result.isValid);
+        }, 50);
+      } else {
+        setErrors({});
+        setTouched({});
+        setIsFormValid(false);
+      }
+      setSubmitError(null);
+    }
+  }, [isOpen, assessment, validateForm]);
+
+  useEffect(() => {
+    return () => {
+      if (validationTimeoutRef.current) clearTimeout(validationTimeoutRef.current);
+    };
+  }, []);
+
   const handleInputChange = (field: keyof AssessmentData, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setFormData((prev) => {
+      const newData = { ...prev, [field]: value };
+      triggerValidation(newData);
+      return newData;
+    });
   };
 
   const dynamicSkillOptions = useMemo(() => {
@@ -282,13 +338,28 @@ const AssessmentModal: React.FC<Props> = ({
   }, [formData.selectedSector]);
 
   const handleSubmit = async () => {
+    const allTouched = { dimensions: true, roleType: true, companyStyle: true, numberOfQuestions: true, assessmentDeadlineHours: true };
+    setTouched(allTouched);
+
+    const result = validateForm(formData);
+    setErrors(result.errors);
+    setIsFormValid(result.isValid);
+
+    if (!result.isValid) {
+      setSubmitError("Please fill in all required fields correctly");
+      return;
+    }
+
     setLoading(true);
+    setSubmitError(null);
 
-    await new Promise((r) => setTimeout(r, 500));
-
-    onSave(formData, questions);
-    setLoading(false);
-    onClose();
+    try {
+      await new Promise((r) => setTimeout(r, 500));
+      onSave(formData, questions);
+      onClose();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addQuestionForDimension = (dimension: string) => {
@@ -349,7 +420,13 @@ const AssessmentModal: React.FC<Props> = ({
               : "Set up a new assessment by defining its structure, questions, and configuration."}
           </DialogDescription>
         </DialogHeader>
-
+          {submitError && (
+            <div className="px-6 pt-4 pb-2">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-800">{submitError}</p>
+              </div>
+            </div>
+          )}
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <div className="flex flex-col gap-4">
@@ -359,11 +436,13 @@ const AssessmentModal: React.FC<Props> = ({
             placeholder="Select sector"
             value={formData.selectedSector}
             options={sectorOptions}
+            error={touched.selectedSector && errors.selectedSector || ""}
             onChange={(val) => handleInputChange("selectedSector", val)}
           />
           <ParallelogramSelect
             label="Company Style"
             placeholder="Select company style"
+            error={touched.companyStyle && errors.companyStyle || ""}
             value={formData.companyStyle}
             options={["Startup", "Standard", "Non-Profit", "Corporation", "Enterprise"]}
             onChange={(val) => handleInputChange("companyStyle", val)}
@@ -372,6 +451,7 @@ const AssessmentModal: React.FC<Props> = ({
           <ParallelogramSelect
             label="Number of Questions"
             placeholder="Select number"
+            error={touched.numberOfQuestions && errors.numberOfQuestions || ""}
             value={formData.numberOfQuestions.toString()}
             options={questionCountOptions.map((count) => count.toString())}
             onChange={(val) =>
@@ -400,6 +480,7 @@ const AssessmentModal: React.FC<Props> = ({
               label="Role Type"
               placeholder="Select role"
               value={formData.roleType}
+              error={touched.roleType && errors.roleType || ""}
               options={[
                 ...roleSuggestions,
               ]}
@@ -434,6 +515,7 @@ const AssessmentModal: React.FC<Props> = ({
             label="Assessment Deadline (hours)"
             placeholder="72"
             value={deadlineInput}
+            error={touched.assessmentDeadlineHours && errors.assessmentDeadlineHours || ""}
             onChange={(e) => {
               const raw = e.target.value.replace(/[^\d]/g, "");
               setDeadlineInput(raw);
@@ -453,14 +535,15 @@ const AssessmentModal: React.FC<Props> = ({
             }}
           />
 
-          {/* Dimensions */}
+            {/* Dimensions - Enhanced with validation */}
             <div className="w-full">
               <div className="flex flex-col gap-3">
-
-                  {/* Label */}
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Assessment Dimensions (select at least 1)
-                  </label>
+                <label className="text-sm font-medium text-muted-foreground">
+                  Assessment Dimensions (select at least 1)
+                  {touched.dimensions && errors.dimensions && (
+                    <span className="text-xs text-red-500 block mt-1">{errors.dimensions}</span>
+                  )}
+                </label>
 
                 <div className="flex flex-col gap-2">
                   {[
@@ -515,9 +598,7 @@ const AssessmentModal: React.FC<Props> = ({
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={() =>
-                                setExpandedDimension(expandedDimension === trait.key ? null : trait.key)
-                              }
+                              onClick={() => setExpandedDimension(expandedDimension === trait.key ? null : trait.key)}
                             >
                               {expandedDimension === trait.key ? "−" : "+"}
                             </Button>
@@ -681,7 +762,11 @@ const AssessmentModal: React.FC<Props> = ({
             <Button variant="outline">Cancel</Button>
           </DialogClose>
 
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={loading || !isFormValid}
+            className={`transition-all ${loading || !isFormValid ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
             {loading ? (
               <Loader2 className="animate-spin w-4 h-4" />
             ) : assessment ? (

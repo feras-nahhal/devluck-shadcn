@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Loader2 } from "lucide-react";
 
 import {
@@ -26,24 +26,15 @@ import DatePickerField from "@/components/common/DatePickerField";
 
 interface ContractData {
   email: string;
-
   name: string;
-
   contractTitle: string;
-
   durationValue: number;
-
   contractStatus: string;
-
   startDate: string;
-
   salary?: string;
-
   note?: string;
-
   opportunityId?: string;
-
-  currency: string,
+  currency: string;
 }
 
 interface ContractModalProps {
@@ -53,10 +44,8 @@ interface ContractModalProps {
   onSave: (data: ContractData) => void;
 }
 
-
 /* ---------------- Main Component ---------------- */
 
-// Main Contract Modal Component
 const ContractModal: React.FC<ContractModalProps> = ({
   contract,
   isOpen,
@@ -82,21 +71,29 @@ const ContractModal: React.FC<ContractModalProps> = ({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [emailSuggestions, setEmailSuggestions] = useState<Array<{ email: string; id: string; name: string }>>([]);
   const [isSearchingEmail, setIsSearchingEmail] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [isFormValid, setIsFormValid] = useState(false);
+  
   const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
+  
   const { searchUserByEmail } = useCompanyApplicationHandler();
   const { createContract, updateContract } = useContractHandler();
   const { opportunities, listOpportunities } = useOpportunityHandler();
 
+  // Load opportunities when modal opens
   useEffect(() => {
     if (isOpen) {
       listOpportunities(1, 1000).catch(console.error);
     }
   }, [isOpen, listOpportunities]);
 
+  // Reset form when contract or modal state changes
   useEffect(() => {
-    if (contract) {
+    const isEditing = !!(contract as any)?.id;
+    
+    if (contract && isEditing) {
       setFormData({
         email: contract.email || "",
         name: contract.name || "",
@@ -109,8 +106,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
         opportunityId: contract.opportunityId || "",
         currency: contract.currency || "USD",
       });
-      // Clear email error when editing (email is optional for updates)
-      setEmailError(null);
     } else {
       setFormData({
         email: "",
@@ -125,114 +120,143 @@ const ContractModal: React.FC<ContractModalProps> = ({
         currency: "USD",
       });
     }
-    setSubmitError(null);
+    
+    // Reset states
+    setErrors({});
+    setTouched({});
     setEmailError(null);
+    setSubmitError(null);
+    setIsFormValid(false);
   }, [contract, isOpen]);
 
+  // Form validation function
+  const validateForm = useCallback((data: ContractData = formData): boolean => {
+    const newErrors: Record<string, string> = {};
+    const isEditing = !!(contract as any)?.id;
 
+    // Required field validations
+    if (!data.opportunityId?.trim()) newErrors.opportunityId = "Opportunity is required";
+    if (!data.name.trim()) newErrors.name = "Name is required";
+    if (!data.contractTitle.trim()) newErrors.contractTitle = "Contract title is required";
+    if (!data.contractStatus) newErrors.contractStatus = "Status is required";
+    if (!data.currency) newErrors.currency = "Currency is required";
+    if (!data.startDate) newErrors.startDate = "Start date is required";
+    
+    // Email required only for new contracts
+    if (!data.email.trim() && !isEditing) newErrors.email = "Email is required";
+    
+    // Number validations
+    const durationNum = Number(data.durationValue);
+    if (!durationNum || durationNum <= 0) newErrors.durationValue = "Duration must be greater than 0";
+    
+    if (!data.salary?.trim()) newErrors.salary = "Salary is required";
+
+    setErrors(newErrors);
+    setIsFormValid(Object.keys(newErrors).length === 0);
+    return Object.keys(newErrors).length === 0;
+  }, [formData, contract]);
+
+  // Handle input changes
   const handleInputChange = (field: keyof ContractData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setFormData((prev) => ({ ...prev, [field]: value as any }));
 
-if (field === "email") {
-  setFormData((prev) => ({ ...prev, email: value }));
+    // Re-validate form after change
+    setTimeout(() => validateForm({ ...formData, [field]: value } as ContractData), 0);
 
-  if (validationTimeoutRef.current) clearTimeout(validationTimeoutRef.current);
-  if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    // Email specific logic
+    if (field === "email") {
+      if (validationTimeoutRef.current) clearTimeout(validationTimeoutRef.current);
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 
-  setEmailError(null);
+      setEmailError(null);
 
-  const email = value.trim();
-
-  if (email.length < 1) {
-    setEmailSuggestions([]);
-    setIsSearchingEmail(false);
-    setValidatingEmail(false);
-    return;
-  }
-
-  // 1. AUTOCOMPLETE (fast, no validation)
-  setIsSearchingEmail(true);
-  searchTimeoutRef.current = setTimeout(async () => {
-    try {
-      const res = await searchUserByEmail(email);
-      setEmailSuggestions(res || []);
-    } catch {
-      setEmailSuggestions([]);
-    } finally {
-      setIsSearchingEmail(false);
-    }
-  }, 200);
-
-  // 2. VALIDATION (only when looks like real email)
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  if (emailRegex.test(email)) {
-    setValidatingEmail(true);
-
-    validationTimeoutRef.current = setTimeout(async () => {
-      try {
-        const res = await searchUserByEmail(email);
-
-        const exists = res?.some(
-          (u: any) => u.email.toLowerCase() === email.toLowerCase()
-        );
-
-        if (!exists) {
-          setEmailError("User does not exist or is not a student");
-        } else {
-          setEmailError(null);
-        }
-      } catch {
-        setEmailError("User validation failed");
-      } finally {
+      const email = value.trim();
+      if (email.length < 1) {
+        setEmailSuggestions([]);
+        setIsSearchingEmail(false);
         setValidatingEmail(false);
+        return;
       }
-    }, 500);
-  }
-}
+
+      // Autocomplete search
+      setIsSearchingEmail(true);
+      searchTimeoutRef.current = setTimeout(async () => {
+        try {
+          const res = await searchUserByEmail(email);
+          setEmailSuggestions(res || []);
+        } catch {
+          setEmailSuggestions([]);
+        } finally {
+          setIsSearchingEmail(false);
+        }
+      }, 200);
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (emailRegex.test(email)) {
+        setValidatingEmail(true);
+        validationTimeoutRef.current = setTimeout(async () => {
+          try {
+            const res = await searchUserByEmail(email);
+            const exists = res?.some((u: any) => u.email.toLowerCase() === email.toLowerCase());
+            if (!exists) {
+              setEmailError("User does not exist or is not a student");
+            } else {
+              setEmailError(null);
+            }
+          } catch {
+            setEmailError("User validation failed");
+          } finally {
+            setValidatingEmail(false);
+          }
+        }, 500);
+      }
+    }
   };
 
   const handleEmailSuggestionSelect = (email: string, name: string) => {
     setFormData((prev) => ({
       ...prev,
-      email: email,
+      email,
       name: name || prev.name
     }));
     setEmailSuggestions([]);
     setEmailError(null);
+    validateForm();
   };
 
+  // Cleanup timeouts
   useEffect(() => {
     return () => {
-      if (validationTimeoutRef.current) {
-        clearTimeout(validationTimeoutRef.current);
-      }
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
+      if (validationTimeoutRef.current) clearTimeout(validationTimeoutRef.current);
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
   }, []);
 
+  // Handle form submission
   const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) {
-      e.preventDefault();
-    }
+    if (e) e.preventDefault();
 
     const isEditing = !!(contract as any)?.id;
 
-    // Email validation only required for new contracts
-    if (!isEditing && (emailError || validatingEmail)) {
-      return;
-    }
+    // Mark all fields as touched
+    const allTouched = {
+      name: true, contractTitle: true, contractStatus: true,
+      durationValue: true, email: true, currency: true,
+      startDate: true, opportunityId: true, salary: true
+    };
+    setTouched(allTouched);
 
-    // Validation - email only required for new contracts
-    if (!isEditing && !formData.email.trim()) {
-      setSubmitError("Email is required for new contracts");
-      return;
-    }
-
-    if (!formData.name.trim() || !formData.contractTitle.trim() || !formData.durationValue || !formData.contractStatus) {
+    // Validate form
+    if (!validateForm()) {
       setSubmitError("Please fill in all required fields");
+      return;
+    }
+
+    // Additional email validation for new contracts
+    if (!isEditing && (emailError || validatingEmail || !formData.email.trim())) {
+      setSubmitError("Please enter a valid student email");
       return;
     }
 
@@ -241,25 +265,22 @@ if (field === "email") {
 
     try {
       const duration = `${formData.durationValue}`;
+      
       if (isEditing) {
-        // Update existing contract
         const contractId = (contract as any).id;
         const contractData = {
           contractTitle: formData.contractTitle,
           name: formData.name.trim(),
-          email: formData.email.trim() || undefined,
+          email: formData.email.trim() || undefined, // Fixed syntax error
           duration,
           salary: formData.salary ? parseFloat(formData.salary) : undefined,
           note: formData.note || undefined,
           status: formData.contractStatus,
           currency: formData.currency,
         };
-
         await updateContract(contractId, contractData);
       } else {
-        // Create new contract
         const contractNumber = `CNT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-
         const contractData = {
           contractTitle: formData.contractTitle,
           email: formData.email.trim(),
@@ -275,7 +296,6 @@ if (field === "email") {
           status: formData.contractStatus,
           opportunityId: formData.opportunityId || undefined,
         };
-
         await createContract(contractData);
       }
 
@@ -288,24 +308,19 @@ if (field === "email") {
     }
   };
 
+  // Show submit error
+  {submitError && (
+    <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+      <p className="text-sm text-red-800">{submitError}</p>
+    </div>
+  )}
+
   return (
     <Dialog open={isOpen} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent
-        className="
-          w-[calc(100%-24px)] 
-          max-w-[640px] 
-          max-h-[90vh] 
-          flex flex-col
-          p-0
-        "
-      >
-
+      <DialogContent className="w-[calc(100%-24px)] max-w-[640px] max-h-[90vh] flex flex-col p-0">
         {/* Header */}
         <DialogHeader className="px-6 pt-6">
-          <DialogTitle>
-            {contract ? "Edit Contract" : "Create Contract"}
-          </DialogTitle>
-
+          <DialogTitle>{contract ? "Edit Contract" : "Create Contract"}</DialogTitle>
           <DialogDescription>
             {contract
               ? "Update contract terms such as salary, duration, or conditions."
@@ -315,103 +330,113 @@ if (field === "email") {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-            <ParallelogramSelect
-              label="Opportunity"
-              placeholder="Select opportunity"
-              value={
-                formData.opportunityId
-                  ? opportunities.find((opp) => opp.id === formData.opportunityId)?.title || ""
-                  : ""
-              }
-              options={opportunities.map((opp) => opp.title)}
-              onChange={(value) => {
-                const selectedOpp = opportunities.find((opp) => opp.title === value);
-                handleInputChange("opportunityId", selectedOpp?.id || "");
-              }}
+          {/* Opportunity */}
+          <ParallelogramSelect
+            label="Opportunity"
+            placeholder="Select opportunity"
+            error={touched.opportunityId && errors.opportunityId ||""}
+            value={
+              formData.opportunityId
+                ? opportunities.find((opp) => opp.id === formData.opportunityId)?.title || ""
+                : ""
+            }
+            options={opportunities.map((opp) => opp.title)}
+            onChange={(value) => {
+              const selectedOpp = opportunities.find((opp) => opp.title === value);
+              handleInputChange("opportunityId", selectedOpp?.id || "");
+            }}
+          />
+
+          {/* Email */}
+          <div className="flex flex-col gap-1">
+            <ParallelogramEmailAutocomplete
+              label="Email"
+              placeholder="Enter student email"
+              value={formData.email}
+              error={touched.email && errors.email ||""}
+              onChange={(e) => handleInputChange("email", e.target.value)}
+              suggestions={emailSuggestions}
+              isLoading={isSearchingEmail}
+              onSuggestionSelect={handleEmailSuggestionSelect}
             />
+            {validatingEmail && (
+              <p className="text-xs text-gray-500 ml-5">Checking user...</p>
+            )}
+            {emailError && (
+              <p className="text-xs text-red-500 ml-5">{emailError}</p>
+            )}
+          </div>
 
-            <div className="flex flex-col gap-1">
-              <ParallelogramEmailAutocomplete
-                label="Email"
-                placeholder="Enter student email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                suggestions={emailSuggestions}
-                isLoading={isSearchingEmail}
-                onSuggestionSelect={handleEmailSuggestionSelect}
-              />
-
-              {/* VALIDATION STATE */}
-              {validatingEmail && (
-                <p className="text-xs text-gray-500 ml-5">Checking user...</p>
-              )}
-
-              {/* ERROR STATE */}
-              {emailError && (
-                <p className="text-xs text-red-500 ml-5">{emailError}</p>
-              )}
-            </div>
-
+          {/* Name */}
           <ParallelogramInput
             label="Name"
             placeholder="Enter applicant name"
+            error={touched.name && errors.name ||""}
             value={formData.name}
             onChange={(e) => handleInputChange("name", e.target.value)}
           />
 
+          {/* Contract Title */}
           <ParallelogramInput
-            label="Contract Titlle"
+            label="Contract Title"
             placeholder="Enter contract title"
+            error={touched.contractTitle && errors.contractTitle ||""}
             value={formData.contractTitle}
             onChange={(e) => handleInputChange("contractTitle", e.target.value)}
           />
 
+          {/* Status */}
           <ParallelogramSelect
-            label="contractStatus"
-            placeholder="Select contractStatus"
+            label="Contract Status"
+            placeholder="Select contract status"
             value={formData.contractStatus}
-            options={[
-              "Running",
-              "Completed"
-            ]}
+            error={touched.contractStatus && errors.contractStatus||""}
+            options={["Running", "Completed"]}
             onChange={(val) => handleInputChange("contractStatus", val)}
           />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ParallelogramInput
-            label="Salary"
-            placeholder="Enter salary amount"
-            type="number"
-            value={formData.salary ?? ""}
-            onChange={(e) => handleInputChange("salary", e.target.value)}
-          />
+          {/* Salary & Currency */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ParallelogramInput
+              label="Salary"
+              placeholder="Enter salary amount"
+              type="number"
+              error={touched.salary && errors.salary ||""}
+              value={formData.salary ?? ""}
+              onChange={(e) => handleInputChange("salary", e.target.value)}
+            />
+            <ParallelogramSelect
+              label="Currency"
+              placeholder="Select currency"
+              value={formData.currency}
+              error={touched.currency && errors.currency ||""}
+              options={["USD", "EUR", "SAR"]}
+              onChange={(val) => handleInputChange("currency", val)}
+            />
+          </div>
 
-          <ParallelogramSelect
-            label="Currency"
-            placeholder="Select currency"
-            value={formData.currency}
-            options={["USD", "EUR", "SAR"]}
-            onChange={(val) => handleInputChange("currency", val)}
-          />
-        </div>
-
+          {/* Start Date */}
           <DatePickerField
             label="Start Date"
             value={formData.startDate}
+            error={touched.startDate && errors.startDate ||""}
             onChange={(val) => handleInputChange("startDate", val)}
           />
 
+          {/* Duration */}
           <ParallelogramInput
             label="Duration (in months)"
             placeholder="Enter number of months"
             type="number"
-            value={formData.durationValue}
+            error={touched.durationValue && errors.durationValue ||""}
+            value={formData.durationValue.toString()}
             onChange={(e) => handleInputChange("durationValue", e.target.value)}
           />
 
+          {/* Note */}
           <ParallelogramInput
             label="Note"
-            placeholder="Note"
+            placeholder="Optional note"
             value={formData.note ?? ""}
             onChange={(e) => handleInputChange("note", e.target.value)}
           />
@@ -419,21 +444,28 @@ if (field === "email") {
 
         {/* Footer */}
         <DialogFooter className="px-6 pb-6 flex gap-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading || !isFormValid}
+            className={`transition-all ${
+              loading || !isFormValid ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
             {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                Saving...
+              </>
             ) : contract ? (
-              "Update"
+              "Update Contract"
             ) : (
-              "Create"
+              "Create Contract"
             )}
           </Button>
         </DialogFooter>
-
       </DialogContent>
     </Dialog>
   );

@@ -15,6 +15,10 @@ interface SkillSelectorProps {
   selected: string[];
   onChange: (selected: string[]) => void;
   allowCustom?: boolean;
+
+  // ✅ NEW
+  error?: string;
+  required?: boolean;
 }
 
 export const SkillSelector: React.FC<SkillSelectorProps> = ({
@@ -23,12 +27,16 @@ export const SkillSelector: React.FC<SkillSelectorProps> = ({
   selected = [],
   onChange,
   allowCustom = false,
+  error,
+  required = false,
 }) => {
   const [customSkill, setCustomSkill] = React.useState("");
+
   const allOptions = React.useMemo(() => {
     const normalized = new Map<string, SkillPill>();
     [...options, ...selected.map((skill) => ({ key: skill, label: skill }))]
       .forEach((skill) => normalized.set(skill.key.toLowerCase(), skill));
+
     return Array.from(normalized.values());
   }, [options, selected]);
 
@@ -43,17 +51,23 @@ export const SkillSelector: React.FC<SkillSelectorProps> = ({
   const addCustomSkill = () => {
     const value = customSkill.trim();
     if (!value) return;
+
     if (!selected.includes(value)) {
       onChange([...selected, value]);
     }
+
     setCustomSkill("");
   };
+
+  const inputClass = error
+    ? "border-red-500 focus-visible:ring-red-500"
+    : "";
 
   return (
     <div className="flex flex-col gap-3 w-full">
       {/* Label */}
       <label className="text-sm font-medium text-muted-foreground">
-        {label}
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
 
       {/* Pills */}
@@ -74,6 +88,8 @@ export const SkillSelector: React.FC<SkillSelectorProps> = ({
           );
         })}
       </div>
+
+      {/* Custom input */}
       {allowCustom && (
         <div className="flex gap-2">
           <Input
@@ -86,11 +102,18 @@ export const SkillSelector: React.FC<SkillSelectorProps> = ({
                 addCustomSkill();
               }
             }}
+            className={inputClass}
           />
+
           <Button type="button" variant="outline" onClick={addCustomSkill}>
             Add
           </Button>
         </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <p className="text-xs text-red-500 ml-1">{error}</p>
       )}
     </div>
   );

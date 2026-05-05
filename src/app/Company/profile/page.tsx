@@ -61,7 +61,7 @@ export default function TopCompanyPage() {
     ranking: companyRanking,
     loading: rankingLoading,getCompanyGlobalRankingByCompanyId
     } = useCompanyGlobalRankingHandler();
-    const { programs, loading: programsLoading, getPrograms } = useProgramHandler();
+    const { programs, loading: programsLoading, getPrograms,deleteProgram } = useProgramHandler();
     const { reviews: companyReviews, loading: reviewsLoading, getReviews } = useReviewHandler();
     const { documents, documentsLoading, getDocuments, uploadDocument, deleteDocument } = useDocumentHandler();
     const company = profile ;
@@ -802,23 +802,33 @@ export default function TopCompanyPage() {
 
     {/* LEGEND (ShadCN ScrollArea) */}
     <ScrollArea className="w-full h-[120px]">
-
-      {programs?.length ? (
+    {programs?.length ? (
         <div className="flex flex-wrap gap-2 justify-center">
-          {programs.map((p: any, i: number) => (
-            <motion.div  key={p?.id || p || `program-${i}`}  whileHover={{ scale: 1.05 }}>
-              <Badge variant="secondary" className="px-3 py-1 text-xs">
+        {programs.map((p: any, i: number) => (
+            <motion.div
+            key={p?.id || p || `program-${i}`}
+            whileHover={{ scale: 1.05 }}
+            className="flex items-center gap-1"
+            >
+            <Badge variant="secondary" className="px-3 py-1 text-xs flex items-center gap-2">
                 {typeof p === "object" ? p.name : p}
-              </Badge>
-            </motion.div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-xs text-muted-foreground text-center py-6">
-          No programs available
-        </div>
-      )}
 
+                {/* DELETE BUTTON */}
+                <button
+                onClick={() => deleteProgram(p?.id)}
+                className="ml-1 text-red-500 hover:text-red-700"
+                >
+                <Trash2 size={14} />
+                </button>
+            </Badge>
+            </motion.div>
+        ))}
+        </div>
+    ) : (
+        <div className="text-xs text-muted-foreground text-center py-6">
+        No programs available
+        </div>
+    )}
     </ScrollArea>
 
   </CardContent>

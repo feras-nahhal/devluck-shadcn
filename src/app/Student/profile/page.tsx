@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/Student/DashboardLayout";
 import { useStudentProfileHandler } from "@/hooks/studentapihandler/useStudentProfileHandler";
 import { useGlobalRankingHandler } from "@/hooks/common/useGlobalRankingHandler";
-import {Calendar,Clock, DollarSign, Ellipsis,Mail,Plus,Settings, Star, Trophy} from "lucide-react";
+import {Calendar,Clock, DollarSign, Ellipsis,Mail,Plus,Settings, Star, Trash2, Trophy} from "lucide-react";
 import { useStudentProfileReview } from "@/hooks/common/useStudentProfileReview";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -444,7 +444,7 @@ export default function ApplicantPage() {
                           onClick={() => removeSkill(skill.id)}
                           className="h-7 px-2 text-xs shrink-0 text-destructive hover:text-destructive"
                         >
-                          Delete
+                          <Trash2 size={14} />
                         </Button>
                       </div>
                     ))}

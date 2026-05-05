@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-
 import {
   Card,
   CardContent,
@@ -15,51 +14,97 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
-/* ================= FILE TYPE ================= */
-type MockFile = {
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
+import { motion, AnimatePresence } from "framer-motion";
+import { Link as LinkIcon } from "lucide-react";
+
+/* ================= TYPES ================= */
+type FileItem = {
+  id: string;
   name: string;
-  type: string;
+  type?: string;
+  url: string;
+};
+
+type LinkItem = {
+  id: string;
+  name: string;
   url: string;
 };
 
 export default function ContractReportCard() {
-  /* ================= PROGRESS ================= */
   const [progressNote, setProgressNote] = useState("");
-  const [sendingProgress, setSendingProgress] = useState(false);
 
-  /* ================= FILES ================= */
-  const [files, setFiles] = useState<MockFile[]>([]);
+  const [links, setLinks] = useState<LinkItem[]>([]);
+  const [linkName, setLinkName] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [openLinkModal, setOpenLinkModal] = useState(false);
+
+  const [files, setFiles] = useState<FileItem[]>([]);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
-  /* ================= HANDLE UPLOAD (MOCK) ================= */
   const handleUpload = (file?: File | null) => {
     if (!file) return;
 
     setUploading(true);
 
     setTimeout(() => {
-      const mockFile: MockFile = {
+      const newFile: FileItem = {
+        id: crypto.randomUUID(),
         name: file.name,
         type: file.type,
-        url: URL.createObjectURL(file), // mock preview
+        url: URL.createObjectURL(file),
       };
 
-      setFiles((prev) => [...prev, mockFile]);
+      setFiles((prev) => [newFile, ...prev]);
       setUploading(false);
 
-      toast.success("File uploaded (mock)");
-    }, 1000);
+      toast.success("File uploaded successfully");
+    }, 900);
+  };
+
+  const addLink = () => {
+    if (!linkName.trim() || !linkUrl.trim()) return;
+
+    const newLink: LinkItem = {
+      id: crypto.randomUUID(),
+      name: linkName,
+      url: linkUrl,
+    };
+
+    setLinks((prev) => [newLink, ...prev]);
+
+    setLinkName("");
+    setLinkUrl("");
+    setOpenLinkModal(false);
+
+    toast.success("Link added");
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Contract Reports</CardTitle>
-        <CardDescription>
-          Progress updates, issue reports, and contract attachments
+    <Card className="rounded-2xl shadow-sm border flex flex-col">
+
+      {/* ================= HEADER ================= */}
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold tracking-tight">
+          Contract Activity
+        </CardTitle>
+
+        <CardDescription className="text-sm text-muted-foreground">
+          Track progress updates, shared links, and uploaded files in one place
         </CardDescription>
       </CardHeader>
 
@@ -67,144 +112,181 @@ export default function ContractReportCard() {
 
         {/* ================= PROGRESS ================= */}
         <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-muted-foreground">
-            Progress Update
-        </h3>
+          <h3 className="text-sm font-medium text-muted-foreground">
+            Progress update
+          </h3>
 
-        <Dialog>
-            <DialogTrigger >
-            <Button>
-                Add Progress Update
-            </Button>
+          <Textarea
+            placeholder="Write what has been completed, blocked, or changed..."
+            value={progressNote}
+            onChange={(e) => setProgressNote(e.target.value)}
+            className="min-h-[110px]"
+          />
+
+          <Button
+            onClick={() => {
+              setProgressNote("");
+              toast.success("Progress sent");
+            }}
+          >
+            Send update
+          </Button>
+        </div>
+
+        {/* ================= LINKS ================= */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-muted-foreground">
+            Shared links
+          </h3>
+
+          <Dialog open={openLinkModal} onOpenChange={setOpenLinkModal}>
+            <DialogTrigger asChild>
+              <Button size="sm">Add link</Button>
             </DialogTrigger>
 
             <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Send Progress Update</DialogTitle>
+              <DialogHeader>
+                <DialogTitle>Add new link</DialogTitle>
                 <DialogDescription>
-                Write a short update about the contract progress.
+                  Attach external resources (GitHub, Drive, Notion, etc.)
                 </DialogDescription>
-            </DialogHeader>
+              </DialogHeader>
 
-            <Textarea
-                placeholder="Write progress update..."
-                value={progressNote}
-                onChange={(e) => setProgressNote(e.target.value)}
-                className="min-h-[120px]"
-            />
+              <div className="space-y-3">
+                <Input
+                  placeholder="Link title"
+                  value={linkName}
+                  onChange={(e) => setLinkName(e.target.value)}
+                />
 
-            <DialogFooter className="flex gap-2">
-                <Button
-                variant="outline"
-                onClick={() => setProgressNote("")}
-                >
-                Cancel
+                <Input
+                  placeholder="https://..."
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOpenLinkModal(false)}>
+                  Cancel
                 </Button>
-
-                <Button
-                disabled={!progressNote.trim() || sendingProgress}
-                onClick={() => {
-                    setSendingProgress(true);
-
-                    setTimeout(() => {
-                    setSendingProgress(false);
-                    setProgressNote("");
-                    toast.success("Progress submitted (mock)");
-                    }, 1000);
-                }}
-                >
-                {sendingProgress ? "Sending..." : "Send Update"}
-                </Button>
-            </DialogFooter>
+                <Button onClick={addLink}>Add link</Button>
+              </DialogFooter>
             </DialogContent>
-        </Dialog>
+          </Dialog>
         </div>
 
-        {/* ================= FILE UPLOAD ================= */}
-        <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-muted-foreground">
-            Attachments
-        </h3>
+        {/* LINKS LIST */}
+        <ScrollArea className="h-[100px] pr-2">
+          <div className="space-y-2">
+            {links.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">
+                No shared links yet — add GitHub, Drive, or documentation
+              </p>
+            ) : (
+              <AnimatePresence>
+                {links.map((l) => (
+                  <motion.div
+                    key={l.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className="p-3 border rounded-xl bg-muted/30 hover:bg-muted/50 transition"
+                  >
+                    <p className="text-sm font-medium">{l.name}</p>
+                    <a
+                      href={l.url}
+                      target="_blank"
+                      className="text-xs text-primary hover:underline break-all"
+                    >
+                      {l.url}
+                    </a>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            )}
+          </div>
+        </ScrollArea>
 
-        {/* DROPZONE */}
-        <div
-            className={`
-            border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition
-            ${dragActive ? "border-primary bg-muted/40" : "border-muted"}
-            `}
+        {/* ================= FILES ================= */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground">
+            Uploaded files
+          </h3>
+
+          {/* DROPZONE */}
+          <div
+            className={`border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer
+            ${dragActive ? "border-primary bg-primary/5 scale-[1.01]" : "border-muted hover:bg-muted/40"}`}
             onDragOver={(e) => {
-            e.preventDefault();
-            setDragActive(true);
+              e.preventDefault();
+              setDragActive(true);
             }}
             onDragLeave={() => setDragActive(false)}
             onDrop={(e) => {
-            e.preventDefault();
-            setDragActive(false);
-
-            const file = e.dataTransfer.files?.[0];
-            if (file) handleUpload(file);
+              e.preventDefault();
+              setDragActive(false);
+              handleUpload(e.dataTransfer.files?.[0]);
             }}
-            onClick={() => {
-            document.getElementById("fileInput")?.click();
-            }}
-        >
-            <p className="text-sm text-muted-foreground">
-            Drag & drop file here or click to upload
+            onClick={() => document.getElementById("fileInput")?.click()}
+          >
+            <p className="text-sm font-medium">
+              Drop files here or click to upload
             </p>
-
             <p className="text-xs text-muted-foreground mt-1">
-            Supports images, PDF, and documents
+              PDF, images, documents supported
             </p>
 
             <Input
-            id="fileInput"
-            type="file"
-            className="hidden"
-            onChange={(e) => handleUpload(e.target.files?.[0])}
+              id="fileInput"
+              type="file"
+              className="hidden"
+              onChange={(e) => handleUpload(e.target.files?.[0])}
             />
+          </div>
         </div>
 
         {/* FILE LIST */}
-        <div className="grid gap-3">
-            {files.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-                No files uploaded yet
-            </p>
+        <ScrollArea className="h-[100px] pr-2">
+          <div className="space-y-2">
+            {files.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">
+                No files uploaded yet — drag a document to get started
+              </p>
+            ) : (
+              <AnimatePresence>
+                {files.map((f) => (
+                  <motion.div
+                    key={f.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="flex justify-between p-3 border rounded-xl bg-muted/30 hover:bg-muted/50 transition"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{f.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {f.type}
+                      </p>
+                    </div>
+
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => window.open(f.url, "_blank")}
+                    >
+                      <LinkIcon className="w-4 h-4" />
+                    </Button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             )}
+          </div>
+        </ScrollArea>
 
-            {files.map((file, i) => (
-            <div
-                key={i}
-                className="flex items-center justify-between border rounded-md p-3"
-            >
-                <div className="flex flex-col">
-                <span className="text-sm font-medium">{file.name}</span>
-
-                <span className="text-xs text-muted-foreground">
-                    {file.type.includes("pdf")
-                    ? "PDF Document"
-                    : file.type.includes("image")
-                    ? "Image File"
-                    : "File"}
-                </span>
-                </div>
-
-                {file.type.includes("image") ? (
-                <img
-                    src={file.url}
-                    className="w-10 h-10 object-cover rounded"
-                />
-                ) : (
-                <div className="text-xs text-muted-foreground">📄</div>
-                )}
-            </div>
-            ))}
-        </div>
-
-        <Button disabled={uploading}>
-            {uploading ? "Uploading..." : "Upload File"}
+        <Button disabled={uploading} className="w-full">
+          {uploading ? "Uploading..." : "Upload file"}
         </Button>
-        </div>
 
       </CardContent>
     </Card>

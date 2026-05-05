@@ -12,6 +12,21 @@ interface Suggestion {
   name?: string;
 }
 
+type Props = {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  suggestions: Suggestion[];
+  isLoading: boolean;
+  onSuggestionSelect: (email: string, name: string) => void;
+
+  // ✅ NEW
+  error?: string;
+  required?: boolean;
+  disabled?: boolean;
+};
+
 export const ParallelogramEmailAutocomplete = ({
   label,
   placeholder,
@@ -20,23 +35,17 @@ export const ParallelogramEmailAutocomplete = ({
   suggestions,
   isLoading,
   onSuggestionSelect,
-}: {
-  label: string;
-  placeholder: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  suggestions: Suggestion[];
-  isLoading: boolean;
-  onSuggestionSelect: (email: string, name: string) => void;
-}) => {
+  error,
+  required = false,
+  disabled = false,
+}: Props) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
   const inputRef = useRef<HTMLInputElement>(null);
-
-  /* ---------------- outside click ---------------- */
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  /* ---------------- outside click ---------------- */
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -103,11 +112,15 @@ export const ParallelogramEmailAutocomplete = ({
     setSelectedIndex(-1);
   };
 
+  const inputClass = error
+    ? "border-red-500 focus-visible:ring-red-500"
+    : "";
+
   return (
     <div className="relative w-full space-y-2">
       {/* Label */}
       <label className="text-xs font-medium text-muted-foreground">
-        {label}
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
 
       {/* Input */}
@@ -119,6 +132,8 @@ export const ParallelogramEmailAutocomplete = ({
           placeholder={placeholder}
           onChange={onChange}
           onKeyDown={handleKeyDown}
+          disabled={disabled}
+          className={inputClass}
           onFocus={() => {
             if (suggestions.length > 0 && value.length >= 1) {
               setShowDropdown(true);
@@ -131,37 +146,42 @@ export const ParallelogramEmailAutocomplete = ({
         )}
       </div>
 
+      {/* Error */}
+      {error && (
+        <p className="text-xs text-red-500 ml-1">{error}</p>
+      )}
+
       {/* Dropdown */}
-        {showDropdown && suggestions.length > 0 && (
+      {showDropdown && suggestions.length > 0 && (
         <div
-            ref={dropdownRef}
-            className="absolute z-50 mt-1 w-full rounded-md border bg-background shadow-md overflow-hidden"
+          ref={dropdownRef}
+          className="absolute z-50 mt-1 w-full rounded-md border bg-background shadow-md overflow-hidden"
         >
-            <ScrollArea className="h-[100px] w-full">
+          <ScrollArea className="h-[100px] w-full">
             <div className="p-1">
-                {suggestions.map((s, index) => (
+              {suggestions.map((s, index) => (
                 <div
-                    key={s.id}
-                    onClick={() => handleSuggestionClick(s)}
-                    className={`cursor-pointer px-3 py-2 text-sm transition rounded-sm
+                  key={s.id}
+                  onClick={() => handleSuggestionClick(s)}
+                  className={`cursor-pointer px-3 py-2 text-sm transition rounded-sm
                     ${
-                        index === selectedIndex
+                      index === selectedIndex
                         ? "bg-muted font-medium"
                         : "hover:bg-muted/50"
                     }`}
                 >
-                    <div className="text-foreground">{s.email}</div>
-                    {s.name && (
+                  <div className="text-foreground">{s.email}</div>
+                  {s.name && (
                     <div className="text-xs text-muted-foreground">
-                        {s.name}
+                      {s.name}
                     </div>
-                    )}
+                  )}
                 </div>
-                ))}
+              ))}
             </div>
-            </ScrollArea>
+          </ScrollArea>
         </div>
-        )}
+      )}
     </div>
   );
 };

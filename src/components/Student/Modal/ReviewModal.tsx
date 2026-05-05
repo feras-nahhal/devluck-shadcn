@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Loader2, Star } from "lucide-react";
 
 import {
   Dialog,
@@ -14,7 +14,6 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { ParallelogramInput } from "@/components/common/ParallelogramInput";
-
 
 interface ReviewData {
   rating: number;
@@ -41,23 +40,115 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   });
 
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [isFormValid, setIsFormValid] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (review) setFormData(review);
-    else setFormData({ rating: 0, comment: "" });
-  }, [review, isOpen]);
+  // ✅ Use ref to prevent infinite loops
+  const isValidatingRef = useRef(false);
+  const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleInputChange = (field: keyof ReviewData, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const emptyForm: ReviewData = {
+    rating: 0,
+    comment: "",
   };
 
+  // ✅ Pure validation function - NO state updates in deps
+  const validateForm = useCallback((data: ReviewData): { isValid: boolean; errors: Record<string, string> } => {
+    const newErrors: Record<string, string> = {};
+
+    if (!data.comment?.trim()) newErrors.comment = "Review comment is required";
+    if (data.rating < 1 || data.rating > 5) newErrors.rating = "Rating must be between 1 and 5";
+
+    const isValid = Object.keys(newErrors).length === 0;
+    return { isValid, errors: newErrors };
+  }, []);
+
+  // ✅ Debounced validation to prevent infinite loops
+  const triggerValidation = useCallback((data: ReviewData) => {
+    if (isValidatingRef.current) return;
+    
+    if (validationTimeoutRef.current) {
+      clearTimeout(validationTimeoutRef.current);
+    }
+
+    isValidatingRef.current = true;
+    validationTimeoutRef.current = setTimeout(() => {
+      const result = validateForm(data);
+      setErrors(result.errors);
+      setIsFormValid(result.isValid);
+      isValidatingRef.current = false;
+    }, 0);
+  }, [validateForm]);
+
+  // Reset form when review or modal state changes
+  useEffect(() => {
+    if (isOpen) {
+      if (review) {
+        // EDIT MODE
+        setFormData(review);
+        setTouched({});
+        setSubmitError(null);
+        // Validate once after state update
+        setTimeout(() => {
+          const result = validateForm(review);
+          setErrors(result.errors);
+          setIsFormValid(result.isValid);
+        }, 50);
+      } else {
+        // CREATE MODE
+        setFormData(emptyForm);
+        setErrors({});
+        setTouched({});
+        setIsFormValid(false);
+        setSubmitError(null);
+      }
+    }
+  }, [review, isOpen, validateForm]);
+
+  // Handle input changes
+  const handleInputChange = (field: keyof ReviewData, value: any) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    
+    setFormData((prev) => {
+      const newData = { ...prev, [field]: value };
+      // Debounced validation
+      triggerValidation(newData);
+      return newData;
+    });
+  };
+
+  // Cleanup timeouts
+  useEffect(() => {
+    return () => {
+      if (validationTimeoutRef.current) {
+        clearTimeout(validationTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleSubmit = async () => {
+    // Mark all fields as touched
+    setTouched({ rating: true, comment: true });
+    
+    const result = validateForm(formData);
+    setErrors(result.errors);
+    setIsFormValid(result.isValid);
+
+    if (!result.isValid) {
+      setSubmitError("Please fill in all required fields correctly");
+      return;
+    }
+
     setLoading(true);
+    setSubmitError(null);
+
     try {
       await onSave(formData);
       onClose();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setSubmitError(err.message || "Failed to save review");
     } finally {
       setLoading(false);
     }
@@ -66,82 +157,89 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
-
-        {/* Header */}
         <DialogHeader>
-          <DialogTitle>
-            {review ? "Edit Review" : "Add Review"}
-          </DialogTitle>
-            <DialogDescription>
-              Provide a rating and write your feedback about the experience.
-            </DialogDescription>
+          <DialogTitle>{review ? "Edit Review" : "Add Review"}</DialogTitle>
+          <DialogDescription>
+            Provide a rating and write your feedback about the experience.
+          </DialogDescription>
         </DialogHeader>
 
-        {/* Content */}
-        <div className="flex flex-col gap-4 py-4">
+        {/* Submit Error */}
+        {submitError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-md mb-4">
+            <p className="text-sm text-red-800">{submitError}</p>
+          </div>
+        )}
 
+        <div className="flex flex-col gap-4 py-4">
           {/* Comment */}
           <ParallelogramInput
             label="Review"
             placeholder="Write your review..."
             value={formData.comment}
             type="textarea"
-            onChange={(e) =>
-              handleInputChange("comment", e.target.value)
-            }
+            error={touched.comment && errors.comment || ""}
+            onChange={(e) => handleInputChange("comment", e.target.value)}
           />
 
           {/* ⭐ Rating */}
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium">Rating</span>
-
+            
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   type="button"
                   key={star}
-                  onClick={() =>
-                    handleInputChange("rating", star)
-                  }
-                  className="transition hover:scale-110"
+                  onClick={() => handleInputChange("rating", star)}
+                  className="transition-all hover:scale-110 p-1 rounded focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 >
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
+                  <Star
+                    size={22}
                     className={
                       star <= formData.rating
-                        ? "text-yellow-400"
-                        : "text-muted-foreground"
+                        ? "fill-primary text-primary"
+                        : "fill-muted-foreground text-muted-foreground"
                     }
-                  >
-                    <path d="M10 1.6l2.6 5.3 5.9.9-4.3 4.2 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.2 5.9-.9L10 1.6z" />
-                  </svg>
+                  />
                 </button>
               ))}
             </div>
+            
+            {touched.rating && errors.rating && (
+              <p className="text-xs text-red-500 mt-1">{errors.rating}</p>
+            )}
+            {formData.rating === 0 && touched.rating && (
+              <p className="text-xs text-red-500 mt-1">Please select a rating</p>
+            )}
           </div>
-
         </div>
 
-        {/* Footer */}
         <DialogFooter className="flex gap-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={loading || !isFormValid}
+            className={`transition-all ${
+              loading || !isFormValid 
+                ? "opacity-50 cursor-not-allowed" 
+                : "hover:bg-primary-500"
+            }`}
+          >
             {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                Saving...
+              </>
             ) : review ? (
-              "Update"
+              "Update Review"
             ) : (
-              "Add"
+              "Add Review"
             )}
           </Button>
         </DialogFooter>
-
       </DialogContent>
     </Dialog>
   );

@@ -11,8 +11,12 @@ type Props = {
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   type?: "text" | "email" | "password" | "number" | "textarea";
-};  
-   
+
+  // ✅ NEW
+  error?: string;
+  required?: boolean;
+};
+
 export const ParallelogramInput = ({
   label,
   placeholder,
@@ -20,12 +24,18 @@ export const ParallelogramInput = ({
   onChange,
   onBlur,
   type = "text",
+  error,
+  required = false,
 }: Props) => {
+  const inputClass = error
+    ? "border-red-500 focus-visible:ring-red-500"
+    : "";
+
   return (
     <div className="flex flex-col gap-2 w-full">
-      {/* Label (shadcn style) */}
+      {/* Label */}
       <label className="text-sm font-medium text-muted-foreground">
-        {label}
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
 
       {/* Input */}
@@ -35,7 +45,7 @@ export const ParallelogramInput = ({
           onChange={onChange}
           onBlur={onBlur}
           placeholder={placeholder}
-          className="resize-none"
+          className={`resize-none ${inputClass}`}
         />
       ) : (
         <Input
@@ -44,7 +54,13 @@ export const ParallelogramInput = ({
           onChange={onChange}
           onBlur={onBlur}
           placeholder={placeholder}
+          className={inputClass}
         />
+      )}
+
+      {/* Error message */}
+      {error && (
+        <p className="text-xs text-red-500 ml-1">{error}</p>
       )}
     </div>
   );

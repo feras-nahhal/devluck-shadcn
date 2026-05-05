@@ -24,6 +24,10 @@ type ParallelogramSelectSearchProps = {
   value: string;
   options: string[];
   onChange: (value: string) => void;
+
+  // ✅ NEW
+  error?: string;
+  required?: boolean;
 };
 
 export const ParallelogramSelectSearch = ({
@@ -32,14 +36,20 @@ export const ParallelogramSelectSearch = ({
   value,
   options,
   onChange,
+  error,
+  required = false,
 }: ParallelogramSelectSearchProps) => {
   const [open, setOpen] = React.useState(false);
+
+  const triggerClass = error
+    ? "border-red-500 focus:ring-red-500"
+    : "";
 
   return (
     <div className="flex flex-col gap-2 w-full">
       {/* Label */}
       <label className="text-sm font-medium text-muted-foreground">
-        {label}
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
 
       {/* Trigger */}
@@ -49,7 +59,10 @@ export const ParallelogramSelectSearch = ({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between"
+            className={cn(
+              "w-full justify-between",
+              triggerClass
+            )}
           >
             {value ? value : placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
@@ -85,6 +98,11 @@ export const ParallelogramSelectSearch = ({
           </Command>
         </PopoverContent>
       </Popover>
+
+      {/* Error */}
+      {error && (
+        <p className="text-xs text-red-500 ml-1">{error}</p>
+      )}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState,useRef, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Loader2, X } from "lucide-react";
 
 import { usePaymentHandler } from "@/hooks/companyapihandler/usePaymentHandler";
@@ -9,7 +9,6 @@ import { ParallelogramSelect } from "@/components/common/ParallelogramSelect";
 import DatePickerField from "@/components/common/DatePickerField";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-
 
 interface PaymentData {
   id?: string;
@@ -37,9 +36,6 @@ interface PaymentModalProps {
   onSave: (data: PaymentData) => void;
 }
 
-
-
-// Main payment Modal Component
 const PaymentModal: React.FC<PaymentModalProps> = ({
   payment,
   contract,
@@ -58,10 +54,38 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const { createPayment, updatePayment, loading } = usePaymentHandler();
+  
+  // Validation state
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [isFormValid, setIsFormValid] = useState(false);
+
+  /* ---------------- Validation ---------------- */
+  const validateForm = useCallback((): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // Required fields
+    if (!formData.applicantName.trim()) newErrors.applicantName = "Applicant name is required";
+    if (!formData.contractId.trim()) newErrors.contractId = "Contract ID is required";
+    if (!formData.monthlyAllowance.trim()) newErrors.monthlyAllowance = "Monthly allowance is required";
+    if (!formData.paymentStatus) newErrors.paymentStatus = "Payment status is required";
+    if (!formData.nextPayment) newErrors.nextPayment = "Payment date is required";
+
+    // Number validation for allowance
+    const allowanceNum = parseFloat(formData.monthlyAllowance.replace(/[^\d.]/g, ''));
+    if (isNaN(allowanceNum) || allowanceNum <= 0) {
+      newErrors.monthlyAllowance = "Enter valid positive amount";
+    }
+
+    setErrors(newErrors);
+    setIsFormValid(Object.keys(newErrors).length === 0);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
 
   useEffect(() => {
     if (payment) {
       setFormData({
+        id: payment.id,
         applicantName: payment.applicantName || "",
         contractId: payment.contractId || "",
         nextPayment: payment.nextPayment || "",
@@ -81,7 +105,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         note: "",
         paymentStatus: "",
       });
-    } else if (!payment && !contract) {
+    } else {
       setFormData({
         applicantName: "",
         contractId: "",
@@ -91,10 +115,23 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         paymentStatus: "",
       });
     }
+    
+    // Reset validation
+    setErrors({});
+    setTouched({});
+    setSubmitError(null);
+    setIsFormValid(false);
   }, [payment, contract, isOpen]);
 
+  // Auto-validate
+  useEffect(() => {
+    if (!isOpen) return;
+    const timeout = setTimeout(validateForm, 200);
+    return () => clearTimeout(timeout);
+  }, [formData, isOpen, validateForm]);
 
   const handleInputChange = (field: keyof PaymentData, value: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -102,15 +139,24 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     e.preventDefault();
     setSubmitError(null);
 
-    if (!formData.applicantName.trim() || !formData.nextPayment || !formData.monthlyAllowance.trim() || !formData.paymentStatus) {
-      setSubmitError("Please fill in all required fields");
+    // Mark all fields touched
+    setTouched({
+      applicantName: true,
+      contractId: true,
+      nextPayment: true,
+      monthlyAllowance: true,
+      paymentStatus: true,
+    });
+
+    if (!validateForm()) {
+      setSubmitError("Please fill all required fields correctly");
       return;
     }
 
     try {
       const paymentData = {
         applicantName: formData.applicantName.trim(),
-        contractId: formData.contractId.trim() || undefined,
+        contractId: formData.contractId.trim(),
         nextPayment: formData.nextPayment,
         monthlyAllowance: formData.monthlyAllowance.trim(),
         note: formData.note?.trim() || undefined,
@@ -122,6 +168,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       } else {
         await createPayment(paymentData);
       }
+      
       onSave(formData);
       onClose();
     } catch (error: any) {
@@ -129,31 +176,15 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
- return (
+  return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-
-      <DialogContent
-        className="
-          w-[calc(100%-24px)]
-          max-w-[640px]
-          max-h-[90vh]
-          flex flex-col
-          p-0
-          overflow-hidden
-        "
-      >
-
+      <DialogContent className="w-[calc(100%-24px)] max-w-[640px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
         {/* HEADER */}
         <DialogHeader className="px-6 pt-6">
-          <DialogTitle>
-            {payment ? "Edit Payment" : "Create Payment"}
-          </DialogTitle>
-
+          <DialogTitle>{payment ? "Edit Payment" : "Create Payment"}</DialogTitle>
           <DialogDescription>
             {payment
-              ? "Update payment details for this applicant’s contract."
+              ? "Update payment details for this applicant's contract."
               : "Record a new payment for an applicant under an active contract."}
           </DialogDescription>
         </DialogHeader>
@@ -161,85 +192,77 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         {/* CONTENT */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <div className="flex flex-col gap-4">
-
             <ParallelogramInput
-              label="Applicant Name"
+              label="Applicant Name *"
               placeholder="Enter applicant name"
               value={formData.applicantName}
-              onChange={(e) =>
-                handleInputChange("applicantName", e.target.value)
-              }
+              error={touched.applicantName && errors.applicantName || ""}
+              onChange={(e) => handleInputChange("applicantName", e.target.value)}
             />
 
             <ParallelogramInput
-              label="Contract ID"
+              label="Contract ID *"
               placeholder="Enter contract ID"
               value={formData.contractId}
-              onChange={(e) =>
-                handleInputChange("contractId", e.target.value)
-              }
+              error={touched.contractId && errors.contractId || ""}
+              onChange={(e) => handleInputChange("contractId", e.target.value)}
             />
 
             <ParallelogramInput
-              label="Monthly Allowance"
-              placeholder="Enter monthly allowance"
+              label="Monthly Allowance *"
+              placeholder="Enter monthly allowance (e.g., 5000 USD)"
               value={formData.monthlyAllowance ?? ""}
-              onChange={(e) =>
-                handleInputChange("monthlyAllowance", e.target.value)
-              }
+              error={touched.monthlyAllowance && errors.monthlyAllowance || ""}
+              onChange={(e) => handleInputChange("monthlyAllowance", e.target.value)}
             />
 
             <ParallelogramSelect
-              label="Payment Status"
+              label="Payment Status *"
               placeholder="Select payment status"
               value={formData.paymentStatus}
+              error={touched.paymentStatus && errors.paymentStatus || ""}
               options={["Paid", "Due", "Pending"]}
-              onChange={(val) =>
-                handleInputChange("paymentStatus", val)
-              }
+              onChange={(val) => handleInputChange("paymentStatus", val)}
             />
 
             <DatePickerField
-              label="Payment Date"
+              label="Payment Date *"
               value={formData.nextPayment}
-              onChange={(val) =>
-                handleInputChange("nextPayment", val)
-              }
+              error={touched.nextPayment && errors.nextPayment || ""}
+              onChange={(val) => handleInputChange("nextPayment", val)}
             />
 
             <ParallelogramInput
               label="Note"
-              placeholder="Note"
+              type="textarea"
+              placeholder="Optional note"
               value={formData.note ?? ""}
-              onChange={(e) =>
-                handleInputChange("note", e.target.value)
-              }
+              onChange={(e) => handleInputChange("note", e.target.value)}
             />
           </div>
 
           {/* ERROR */}
           {submitError && (
             <div className="mt-4 bg-destructive/10 border border-destructive/20 rounded-md p-3">
-              <p className="text-sm text-destructive">
-                {submitError}
-              </p>
+              <p className="text-sm text-destructive">{submitError}</p>
             </div>
           )}
         </div>
 
         {/* FOOTER */}
         <DialogFooter className="px-6 pb-6 flex gap-2">
-
           <DialogClose asChild>
-            <Button variant="outline" className="flex-1">
+            <Button variant="outline" className="flex-1" disabled={loading}>
               Cancel
             </Button>
           </DialogClose>
 
           <Button
             onClick={handleSubmit}
-            disabled={loading}
-            className="flex-1"
+            disabled={loading || !isFormValid}
+            className={`flex-1 transition-all ${
+              loading || !isFormValid ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -249,12 +272,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               "Confirm"
             )}
           </Button>
-
         </DialogFooter>
-
       </DialogContent>
     </Dialog>
   );
-}
+};
 
 export default PaymentModal;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -14,8 +14,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { ParallelogramInput } from "@/components/common/ParallelogramInput";
 import { ParallelogramSelect } from "@/components/common/ParallelogramSelect";
-
-
 
 interface ProfileData {
   id?: string;
@@ -106,7 +104,7 @@ const ParallelogramFileInput = ({
   );
 };  
 
-// Main payment Modal Component
+// Main Profile Modal Component
 const ProfileModal: React.FC<ProfileModalProps> = ({
   profile,
   isOpen,
@@ -127,24 +125,78 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-   useEffect(() => {
-    if (profile) {
-      setFormData({
-        name: profile.name || "",
-        email: (profile as any).email || "",
-        description: profile.description || "",
-        availability: profile.availability || "",
-        salaryExpectation: (profile as any).salaryExpectation ? String((profile as any).salaryExpectation) : ""
-      });
-    } else {
-      setFormData({ name: "", email: "", description: "", availability: "", salaryExpectation: "" });
+  // OPTIMIZED VALIDATION STATES
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [isFormValid, setIsFormValid] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const emptyForm = useMemo(() => ({
+    name: "",
+    email: "",
+    description: "",
+    availability: "",
+    salaryExpectation: "",
+  }), []);
+
+  // Lightweight validation
+  const validateForm = useCallback((data: ProfileData) => {
+    const newErrors: Record<string, string> = {};
+
+    if (!data.name?.trim()) newErrors.name = "Name is required";
+    if (!data.email?.trim()) newErrors.email = "Email is required";
+    else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(data.email.trim())) {
+        newErrors.email = "Please enter a valid email address";
+      }
     }
-  }, [profile, isOpen]);
+    if (!data.availability?.trim()) newErrors.availability = "Availability is required";
 
+    if (data.description?.trim().length && data.description.trim().length < 10) {
+      newErrors.description = "Description must be at least 10 characters";
+    }
 
-  const handleInputChange = (field: keyof ProfileData, value: string) => {
+    const isValid = Object.keys(newErrors).length === 0;
+    setErrors(newErrors);
+    setIsFormValid(isValid);
+    return isValid;
+  }, []);
+
+  // Fast input handler - NO real-time validation
+  const handleInputChange = useCallback((field: keyof ProfileData, value: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  }, []);
+
+  // Validate only onBlur
+  const handleBlur = useCallback((field: keyof ProfileData) => {
+    validateForm(formData);
+  }, [formData, validateForm]);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (profile) {
+        const profileData = {
+          name: profile.name || "",
+          email: profile.email || "",
+          description: profile.description || "",
+          availability: profile.availability || "",
+          salaryExpectation: profile.salaryExpectation ? String(profile.salaryExpectation) : ""
+        };
+        setFormData(profileData);
+        setTouched({});
+        validateForm(profileData);
+      } else {
+        setFormData(emptyForm);
+        setErrors({});
+        setTouched({});
+        setIsFormValid(false);
+      }
+      setSubmitError(null);
+      setSelectedFile(null);
+    }
+  }, [profile, isOpen, validateForm, emptyForm]);
 
   const uploadImageToCloudinary = async (file: File): Promise<string> => {
     const formData = new FormData();
@@ -171,20 +223,27 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.email || formData.email.trim() === '') {
-      alert('Email is required');
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(formData.email.trim())) {
-      alert('Please enter a valid email address');
+    const allTouched = {
+      name: true,
+      email: true,
+      availability: true,
+      description: true,
+      salaryExpectation: true
+    };
+    setTouched(allTouched);
+    
+    const isValid = validateForm(formData);
+    
+    if (!isValid) {
+      setSubmitError("Please fill in all required fields correctly");
       return;
     }
 
     setLoading(true);
+    setSubmitError(null);
+
     try {
-      let imageUrl = formData.image || profile?.image;
+      let imageUrl = profile?.image;
 
       if (selectedFile) {
         setUploadingImage(true);
@@ -192,24 +251,21 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
           imageUrl = await uploadImageToCloudinary(selectedFile);
         } catch (error: any) {
           console.error("Error uploading image:", error);
-          alert(`Failed to upload image: ${error.message}`);
-          setUploadingImage(false);
+          setSubmitError(`Failed to upload image: ${error.message}`);
           setLoading(false);
           return;
-        } finally {
-          setUploadingImage(false);
         }
       }
 
       await onSave({ ...formData, image: imageUrl });
       onClose();
-    } catch (error) {
-      console.error("Error saving profile:", error);
+    } catch (error: any) {
+      setSubmitError(error.message || "Failed to save profile");
     } finally {
       setLoading(false);
+      setUploadingImage(false);
     }
   };
-
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -228,10 +284,21 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="flex flex-col gap-4">
+        {submitError && (
+          <div className="px-6 pt-4 pb-2">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-800">{submitError}</p>
+            </div>
+          </div>
+        )}
 
+        {/* Content */}
+        <form
+          id="profileForm"
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto px-6 py-4"
+        >
+          <div className="flex flex-col gap-4">
             <div className="flex justify-center">
               <ParallelogramFileInput
                 label="Profile Photo"
@@ -239,10 +306,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                 onChange={(file) => {
                   if (file) {
                     setSelectedFile(file);
-                    setFormData((prev) => ({
-                      ...prev,
-                      image: URL.createObjectURL(file),
-                    }));
                   } else {
                     setSelectedFile(null);
                   }
@@ -254,13 +317,16 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
               label="Name"
               placeholder="Enter your name"
               value={formData.name}
+              error={touched.name && errors.name || ""}
               onChange={(e) => handleInputChange("name", e.target.value)}
+              onBlur={() => handleBlur("name")}
             />
 
             <ParallelogramSelect
               label="Availability"
               placeholder="Select availability"
               value={formData.availability}
+              error={touched.availability && errors.availability || ""}
               options={availabilityOptions}
               onChange={(value) => handleInputChange("availability", value)}
             />
@@ -270,9 +336,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
               placeholder="Enter expected salary"
               value={formData.salaryExpectation || ""}
               type="number"
-              onChange={(e) =>
-                handleInputChange("salaryExpectation", e.target.value)
-              }
+              error={touched.salaryExpectation && errors.salaryExpectation || ""}
+              onChange={(e) => handleInputChange("salaryExpectation", e.target.value)}
+              onBlur={() => handleBlur("salaryExpectation")}
             />
 
             <ParallelogramInput
@@ -280,23 +346,32 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
               placeholder="Write something about yourself"
               value={formData.description}
               type="textarea"
-              onChange={(e) =>
-                handleInputChange("description", e.target.value)
-              }
+              error={touched.description && errors.description || ""}
+              onChange={(e) => handleInputChange("description", e.target.value)}
+              onBlur={() => handleBlur("description")}
             />
-
           </div>
-        </div>
+        </form>
 
         {/* Footer */}
         <DialogFooter className="px-6 pb-6 flex gap-2">
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button type="button" variant="outline" disabled={loading}>
+              Cancel
+            </Button>
           </DialogClose>
 
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+          <Button 
+            type="submit" 
+            form="profileForm" 
+            disabled={loading || !isFormValid || uploadingImage}
+            className={`transition-all ${loading || !isFormValid || uploadingImage ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            {loading || uploadingImage ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                {uploadingImage ? "Uploading..." : "Saving..."}
+              </>
             ) : profile ? (
               "Update"
             ) : (
@@ -304,7 +379,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
             )}
           </Button>
         </DialogFooter>
-
       </DialogContent>
     </Dialog>
   );

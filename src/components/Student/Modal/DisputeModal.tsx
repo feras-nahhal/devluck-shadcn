@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Loader2 } from "lucide-react";
 
 import {
@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { useStudentDisputeHandler } from "@/hooks/studentapihandler/useStudentDisputeHandler";
 import { ParallelogramInput } from "@/components/common/ParallelogramInput";
 import { ParallelogramSelect } from "@/components/common/ParallelogramSelect";
-
 
 interface ContractDispute {
   reason: string;
@@ -45,30 +44,82 @@ const DisputeModal: React.FC<ContractDisputeModalProps> = ({
 
   const { createDispute, loading } = useStudentDisputeHandler();
 
+  // ✅ VALIDATION STATES
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [isFormValid, setIsFormValid] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ✅ Validation function
+  const validateForm = useCallback((data: ContractDispute): { isValid: boolean; errors: Record<string, string> } => {
+    const newErrors: Record<string, string> = {};
+
+    if (!data.reason?.trim()) newErrors.reason = "Please select a dispute reason";
+    if (data.note?.trim().length && data.note.trim().length < 10) {
+      newErrors.note = "Note must be at least 10 characters";
+    }
+
+    const isValid = Object.keys(newErrors).length === 0;
+    return { isValid, errors: newErrors };
+  }, []);
+
+  // ✅ Debounced validation
+  const triggerValidation = useCallback((data: ContractDispute) => {
+    if (validationTimeoutRef.current) clearTimeout(validationTimeoutRef.current);
+    
+    validationTimeoutRef.current = setTimeout(() => {
+      const result = validateForm(data);
+      setErrors(result.errors);
+      setIsFormValid(result.isValid);
+    }, 100);
+  }, [validateForm]);
 
   useEffect(() => {
     if (isOpen) {
       setFormData({ reason: "", note: "" });
+      setErrors({});
+      setTouched({});
+      setIsFormValid(false);
       setSubmitError(null);
       setSubmitSuccess(false);
+      if (validationTimeoutRef.current) clearTimeout(validationTimeoutRef.current);
     }
   }, [isOpen]);
 
+  // ✅ Enhanced change handler
+  const handleInputChange = (field: keyof ContractDispute, value: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    
+    setFormData((prev) => {
+      const newData = { ...prev, [field]: value };
+      triggerValidation(newData);
+      return newData;
+    });
+  };
+
   const handleSubmit = async () => {
-    if (!formData.reason?.trim()) {
-      setSubmitError("Please provide a reason for the dispute");
+    // Mark all fields as touched
+    setTouched({ reason: true, note: true });
+
+    const result = validateForm(formData);
+    setErrors(result.errors);
+    setIsFormValid(result.isValid);
+
+    if (!result.isValid) {
+      setSubmitError("Please fill in all required fields correctly");
       return;
     }
 
     try {
       await createDispute(contractId, {
-        reason: formData.reason,
-        note: formData.note || undefined,
+        reason: formData.reason.trim(),
+        note: formData.note.trim() || undefined,  // ✅ Fixed syntax error
       });
 
       setSubmitSuccess(true);
+      setSubmitError(null);
 
       setTimeout(() => {
         onSuccess?.();
@@ -79,61 +130,54 @@ const DisputeModal: React.FC<ContractDisputeModalProps> = ({
     }
   };
 
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (validationTimeoutRef.current) clearTimeout(validationTimeoutRef.current);
+    };
+  }, []);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        className="
-          w-[calc(100%-24px)]
-          max-w-[640px]
-          max-h-[90vh]
-          flex flex-col
-          p-0
-        "
-      >
-        {/* Header */}
+      <DialogContent className="w-[calc(100%-24px)] max-w-[640px] max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6">
           <DialogTitle>Send Contract Dispute</DialogTitle>
-
           <DialogDescription>
             Report an issue with this contract. The dispute will be reviewed by the company or system admin.
           </DialogDescription>
         </DialogHeader>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <div className="flex flex-col gap-4">
 
+            {/* ✅ Reason with validation */}
             <ParallelogramSelect
               label="Select Reason"
               placeholder="Choose dispute reason"
               value={formData.reason}
+              error={touched.reason && errors.reason || ""}
               options={[
                 "Payment Issue",
-                "Contract Terms",
+                "Contract Terms", 
                 "Work Scope Disagreement",
                 "Delay / Deadline Issue",
                 "Other",
               ]}
-              onChange={(value) =>
-                setFormData((prev) => ({ ...prev, reason: value }))
-              }
+              onChange={(value) => handleInputChange("reason", value)}
             />
 
+            {/* ✅ Note with validation */}
             <ParallelogramInput
               label="Note"
               placeholder="Write your dispute details here..."
               value={formData.note}
               type="textarea"
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  note: e.target.value,
-                }))
-              }
+              error={touched.note && errors.note || ""}
+              onChange={(e) => handleInputChange("note", e.target.value)}
             />
 
-            {/* Error */}
-            {submitError && (
+            {/* ✅ Submit Error */}
+            {submitError && !submitSuccess && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
                 {submitError}
               </div>
@@ -148,7 +192,6 @@ const DisputeModal: React.FC<ContractDisputeModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
         <DialogFooter className="px-6 pb-6 flex gap-2">
           <DialogClose asChild>
             <Button variant="outline" disabled={loading || submitSuccess}>
@@ -158,7 +201,8 @@ const DisputeModal: React.FC<ContractDisputeModalProps> = ({
 
           <Button
             onClick={handleSubmit}
-            disabled={loading || submitSuccess}
+            disabled={loading || submitSuccess || !isFormValid}
+            className={`transition-all ${loading || submitSuccess || !isFormValid ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             {loading ? (
               <>
@@ -166,9 +210,9 @@ const DisputeModal: React.FC<ContractDisputeModalProps> = ({
                 Sending...
               </>
             ) : submitSuccess ? (
-              "Sent"
+              "Sent ✓"
             ) : (
-              "Send"
+              "Send Dispute"
             )}
           </Button>
         </DialogFooter>

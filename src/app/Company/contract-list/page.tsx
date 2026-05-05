@@ -564,6 +564,19 @@ return [
                           ? "disputed"
                           : "evaluation"
                     }}
+                    hasReport={true}   // 👈 mock for now
+                    report={{
+                      note:
+                        "Student completed initial UI implementation, fixed layout issues, and submitted first version of contract dashboard.",
+                      links: [
+                        { name: "GitHub Repo", url: "https://github.com/example" },
+                        { name: "Figma Design", url: "https://figma.com/example" },
+                      ],
+                      files: [
+                        { name: "final-report.pdf", url: "#" },
+                        { name: "screenshot.png", url: "#" },
+                      ],
+                    }}
                     // This single line replaces all separate onEdit, onDelete, onDispute props
                     onAction={(action, id) => handleContractAction(action, id)}
                   />

@@ -10,12 +10,18 @@ type MultiInputListProps = {
   label: string;
   items: string[];
   setItems: (items: string[]) => void;
+
+  // ✅ NEW
+  error?: string;
+  required?: boolean;
 };
 
 export const MultiInputList: React.FC<MultiInputListProps> = ({
   label,
   items,
   setItems,
+  error,
+  required = false,
 }) => {
   const [currentValue, setCurrentValue] = useState("");
 
@@ -43,11 +49,15 @@ export const MultiInputList: React.FC<MultiInputListProps> = ({
     }
   };
 
+  const inputClass = error
+    ? "border-red-500 focus-visible:ring-red-500"
+    : "";
+
   return (
     <div className="flex flex-col gap-3 w-full">
       {/* Label */}
       <div className="text-sm font-medium text-muted-foreground">
-        {label}
+        {label} {required && <span className="text-red-500">*</span>}
       </div>
 
       {/* Input + Button */}
@@ -57,6 +67,7 @@ export const MultiInputList: React.FC<MultiInputListProps> = ({
           placeholder={`Add ${label.toLowerCase()}`}
           onChange={(e) => setCurrentValue(e.target.value)}
           onKeyDown={handleKeyDown}
+          className={inputClass}
         />
 
         <Button
@@ -67,6 +78,11 @@ export const MultiInputList: React.FC<MultiInputListProps> = ({
           Add
         </Button>
       </div>
+
+      {/* Error */}
+      {error && (
+        <p className="text-xs text-red-500 ml-1">{error}</p>
+      )}
 
       {/* Items */}
       <div className="flex flex-wrap gap-2">
