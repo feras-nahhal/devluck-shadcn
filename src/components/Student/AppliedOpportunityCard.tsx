@@ -118,7 +118,7 @@ export const AppliedOpportunityCard = ({
           {/* TEXT */}
           <div className="space-y-1 min-w-0">
             <CardTitle className="text-base font-semibold truncate">
-              {truncate(applicant.contractTitle, 20)}
+              {truncate(applicant.contractTitle,35)}
             </CardTitle>
 
             <CardDescription className="truncate">

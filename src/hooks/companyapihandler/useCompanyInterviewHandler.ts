@@ -10,6 +10,7 @@ type AssignInterviewPayload = {
   applicationId?: string
   interviewDate: string
   interviewTime: string
+  timeZone?: string
   meetingLink: string
   notes?: string
 }
@@ -22,9 +23,14 @@ export const useCompanyInterviewHandler = () => {
     setLoading(true)
     setError(null)
     try {
+      const browserTimeZone =
+        typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC"
       const response = await api.post<{ status: string; data: any }>(
         "/api/company/interviews",
-        payload
+        {
+          ...payload,
+          timeZone: payload.timeZone || browserTimeZone
+        }
       )
       return response.data.data
     } catch (err: any) {

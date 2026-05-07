@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/Student/DashboardLayout";
 import { useStudentContractHandler } from "@/hooks/studentapihandler/useStudentContractHandler";
 import { useStudentPaymentHandler } from "@/hooks/studentapihandler/useStudentPaymentHandler";
 import { useStudentReviewHandler } from "@/hooks/studentapihandler/useStudentReviewHandler";
+import { useStudentContractProgressHandler } from "@/hooks/studentapihandler/useStudentContractProgressHandler";
 import { FileText, Briefcase, ArrowLeft } from 'lucide-react';
 import {SyncLoader } from "react-spinners";
 import { DescriptionComponent } from "@/components/common/DescriptionComponent";
@@ -22,7 +23,6 @@ import { IconTabs } from "@/components/common/TabItem";
 import { LoadingState } from "@/components/common/LoadingState";
 import EmptyStateFeedback from "@/components/common/EmptyStateFeedback";
 import { ContractDescriptionComponent } from "@/components/Student/ContractDescriptionComponent";
-import ContractExtrasCard from "@/components/Student/ContractExtrasCard";
 import ContractReportCard from "@/components/Student/ContractExtrasCard";
 
 export default function contractDetailPage() {
@@ -39,13 +39,21 @@ export default function contractDetailPage() {
   const { contract, loading, error, getContractById } = useStudentContractHandler();
   const { payments, loading: paymentsLoading, listPayments } = useStudentPaymentHandler();
   const { createReview, loading: reviewLoading } = useStudentReviewHandler();
+  const {
+    progressItems,
+    loading: progressLoading,
+    submitting: progressSubmitting,
+    listProgress,
+    createProgress
+  } = useStudentContractProgressHandler();
 
   useEffect(() => {
     if (contractId && typeof contractId === 'string') {
       getContractById(contractId).catch(console.error);
       listPayments(1, 100, contractId).catch(console.error);
+      listProgress(contractId).catch(console.error);
     }
-  }, [contractId, getContractById, listPayments]);
+  }, [contractId, getContractById, listPayments, listProgress]);
   const opportunity = contract?.opportunity;
 
 
@@ -245,7 +253,19 @@ export default function contractDetailPage() {
                       </Card>
                     </div>
                     <div className="w-full">
-                      <ContractReportCard />
+                      <ContractReportCard
+                        submitting={progressSubmitting}
+                        history={progressItems}
+                        onSubmit={async ({ report, links, files }) => {
+                          if (!contractId) {
+                            throw new Error("Contract ID is missing");
+                          }
+                          await createProgress(contractId, { report, links, files });
+                        }}
+                      />
+                      {progressLoading && (
+                        <p className="text-sm text-muted-foreground mt-2">Loading progress updates...</p>
+                      )}
                     </div>
                     <div className="w-full">
                       <Card>

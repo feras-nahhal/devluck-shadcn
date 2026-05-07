@@ -29,27 +29,40 @@ import {
   Eye,
   Fingerprint,
   BadgeCheck,
+  TrendingUp,
+  Clock,
+  Activity,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 
 
 import { Button } from "@/components/ui/button";
 import { InfoItem } from "../common/info-item";
+import { cn } from "@/lib/utils";
 
 interface ContractCardProps {
   contract: {
     id: string;
     applicantId: number;
+
     contractTitle: string;
     company: string;
-    jobType: string;
     location: string;
-    note: string;
-    startDate: string;
-    endDate: string;
+
+    workProgress: number;
+
+    startDate: string; // formatted display date
+
+    durationMonths: number;
+
     status: string;
+
     salary: string;
-    startedAt: string;
+
+    note?: string;
   };
+
   onDetails?: () => void;
   onDispute?: () => void;
 }
@@ -75,26 +88,33 @@ const getStatusStyles = () => {
   }
 };
 
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case "Running":
+      return <Activity className="h-3 w-3" />;
+    case "Completed":
+      return <CheckCircle2 className="h-3 w-3" />;
+    case "Disputed":
+      return <AlertTriangle className="h-3 w-3" />;
+    default:
+      return null;
+  }
+};
+
   return (
     <Card className="rounded-2xl shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row items-start justify-between pb-2">
         <div className="space-y-1">
           <CardTitle className="text-base font-semibold leading-tight">
-            {truncate(contract.contractTitle)}
+            {truncate(contract.contractTitle,35)}
           </CardTitle>
 
           <CardDescription>
-            {truncate(contract.company, 20)}
+            {truncate(contract.company, 24)}
           </CardDescription>
         </div>
 
         {/* RIGHT SIDE ACTIONS */}
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-            <Fingerprint className="h-3 w-3" />
-            {contract.id.slice(0, 8)}
-          </Badge>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="p-1 rounded-md hover:bg-muted">
@@ -116,64 +136,88 @@ const getStatusStyles = () => {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
       </CardHeader>
 
-      {/* CONTENT */}
-      <CardContent className="flex flex-col gap-3 flex-1">
-        
-        {/* Top meta */}
-        <div className="flex items-center justify-between">
+      <CardContent className="space-y-3">
+          {/* STATUS + ID */}
+          <div className="flex items-center justify-between">
+          <Badge
+            variant="outline"
+            className={cn(
+              "flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide",
+              getStatusStyles()
+            )}
+          >
+            {getStatusIcon(contract.status)}
+            {contract.status}
+          </Badge>
 
+          <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+            <Fingerprint className="h-3 w-3" />
+            {contract.id.slice(0, 8)}
+          </Badge>
 
-        </div>
-
-        <Separator />
-
-        {/* Info Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          <InfoItem
-            label="Start Date"
-            value={contract.startedAt}
-            icon={<Calendar className="w-4 h-4" />}
-          />
-
-          <InfoItem
-            label="Duration"
-            value={truncate(contract.endDate)}
-            icon={<Calendar className="w-4 h-4" />}
-          />
+          </div>
+        {/* TOP GRID */}
+        <div className="grid grid-cols-2 gap-4 rounded-xl border bg-muted/20 p-4">
 
           <InfoItem
             label="Salary"
             value={truncate(contract.salary, 12)}
+            highlight
           />
 
           <InfoItem
-            label="Status"
-            value={
-            <Badge
-              variant="outline"
-              className={getStatusStyles()}
-              >
-              {contract.status}
-            </Badge>}
-            icon={<BadgeCheck className="w-4 h-4" />}
+            label="Start Date"
+            value={contract.startDate}
+            icon={<Calendar className="h-3.5 w-3.5" />}
           />
 
+          <InfoItem
+            label="Duration"
+            value={`${contract.durationMonths} month${contract.durationMonths > 1 ? "s" : ""}`}
+            icon={<Clock className="h-3.5 w-3.5" />}
+          />
+
+          {/* SHADCN PROGRESS */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Progress
+              </p>
+
+              <span className="text-xs font-semibold text-foreground">
+                {contract.workProgress ?? 0}%
+              </span>
+            </div>
+
+            <Progress value={contract.workProgress ?? 0} className="h-2" />
+          </div>
 
         </div>
 
-        <Separator />
-        {/* Description / Note */}
-        <div className="space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Note
+        {/* NOTE */}
+        <div className="space-y-2">
+
+          <div className="flex items-center gap-2">
+            <span className="h-px flex-1 bg-border" />
+
+            <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+              Contract Notes
+            </span>
+
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <p
+            className={cn(
+              "px-1 text-sm leading-relaxed",
+              contract.note ? "text-foreground" : "text-muted-foreground italic"
+            )}
+          >
+            {contract.note || "No notes provided for this contract."}
           </p>
 
-          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 break-words">
-            {contract.note || "No note available"}
-          </p>
         </div>
 
       </CardContent>

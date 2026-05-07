@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/Company/DashboardLayout";
 import { CheckCircle, CheckCircle2, Currency, Edit, Eye, File, FilePlus2, FileText, MoreHorizontal, PlayCircle, Trash2 } from 'lucide-react';
 
 import { useContractHandler } from "@/hooks/companyapihandler/useContractHandler";
+import { useCompanyContractProgressHandler } from "@/hooks/companyapihandler/useCompanyContractProgressHandler";
 import { motion } from "framer-motion";
 import { SyncLoader } from "react-spinners";
 import DecryptedText from "@/components/ui/DecryptedText";
@@ -105,6 +106,13 @@ export default function ContractListPage() {
     updateContract,
     deleteContract,
   } = useContractHandler();
+  const {
+    getContractProgressReports,
+    updateContractProgress,
+    loading: reportLoading,
+    updating: progressSaving
+  } = useCompanyContractProgressHandler();
+  const [reportByContractId, setReportByContractId] = useState<Record<string, any>>({});
 
   const [totalContracts, setTotalContracts] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -190,41 +198,164 @@ export default function ContractListPage() {
   // =========================
   // Mapping
   // =========================
-  const mappedContracts: MappedContract[] = useMemo(() => {
+   const mappedContracts: MappedContract[] = useMemo(() => {
     return contracts.map((contract) => {
-      const createdDate = new Date(
+      /* =====================================================
+      * DATES
+      * ===================================================== */
+
+      const contractStartDate = new Date(
         contract.createdDate || contract.createdAt
       );
 
-      const durationMonths = contract.duration
-        ? parseInt(contract.duration.split(" ")[0])
-        : 0;
+      const durationMonths = Number(
+        contract.duration?.match(/\d+/)?.[0] || 0
+      );
 
-      const endDate = new Date(createdDate);
-      endDate.setMonth(endDate.getMonth() + durationMonths);
+      const contractEndDate = new Date(contractStartDate);
 
-      const fullId = contract.inContractNumber || contract.id;
-      const truncatedId =
-        fullId.length > 3 ? fullId.substring(fullId.length - 3) : fullId;
+      contractEndDate.setMonth(
+        contractEndDate.getMonth() + durationMonths
+      );
+
+      /* =====================================================
+      * CONTRACT IDS
+      * ===================================================== */
+
+      const contractNumber =
+        contract.inContractNumber || contract.id;
+
+      const shortContractId =
+        contractNumber.length > 4
+          ? contractNumber.slice(-4)
+          : contractNumber;
+
+      /* =====================================================
+      * SALARY
+      * ===================================================== */
+
+      const salaryDisplay = contract.monthlyAllowance
+        ? `${contract.currency || "USD"} ${contract.monthlyAllowance}`
+        : contract.salary
+        ? `${contract.currency || "USD"} ${contract.salary}`
+        : "N/A";
+      /* =====================================================
+      * STATUS → STAGE
+      * ===================================================== */
+
+      const normalizedStatus =
+        contract.status?.toLowerCase();
+
+      const currentStage =
+        normalizedStatus === "completed"
+          ? "completed"
+          : normalizedStatus === "running"
+          ? "running"
+          : normalizedStatus === "disputed"
+          ? "disputed"
+          : "evaluation";
+
+      /* =====================================================
+      * RETURN
+      * ===================================================== */
 
       return {
-        applicantId: truncatedId,
-        name: contract.name,
-        contractTitle: contract.contractTitle,
-        startDate: createdDate.toLocaleDateString("en-US"),
-        endDate: endDate.toLocaleDateString("en-US"),
-        contractStatus: contract.status,
+        /* =========================================
+        * IDs
+        * ======================================= */
+
         id: contract.id,
-        image: contract.student?.image,
-        currency:contract.currency,
-        salaryPaid: contract.monthlyAllowance
-          ? `${contract.currency || "USD"} ${contract.monthlyAllowance}`
-          : contract.salary
-          ? `${contract.currency || "USD"} ${contract.salary}`
-          : "N/A",
-        workProgress: 0,
+        contractNumber,
+        shortContractId,
+
+        /* =========================================
+        * Student
+        * ======================================= */
+
+        studentName: contract.name || "Unknown Student",
+
+        studentImage:
+          contract.student?.image || undefined,
+
+        /* =========================================
+        * Contract
+        * ======================================= */
+
+        contractTitle:
+          contract.contractTitle || "Untitled Contract",
+
+        contractStatus: contract.status,
+        currentStage,
+
+        /* =========================================
+        * Dates
+        * ======================================= */
+
+        startDate:
+          contractStartDate.toLocaleDateString(
+            "en-US",
+            {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }
+          ),
+
+        endDate:
+          contractEndDate.toLocaleDateString(
+            "en-US",
+            {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }
+          ),
+
+        createdAt: contract.createdAt,
+        updatedAt: contract.updatedAt,
+
+        /* =========================================
+        * Finance
+        * ======================================= */
+
+        currency: contract.currency || "USD",
+
+        monthlyAllowance:
+          contract.monthlyAllowance ?? undefined,
+
+        salary:
+          contract.salary ?? undefined,
+
+        salaryDisplay,
+
+        /* =========================================
+        * Progress
+        * ======================================= */
+
+        workProgress:
+          typeof contract.workProgress === "number"
+            ? contract.workProgress
+            : 0,
+
+        /* =========================================
+        * Extra Details
+        * ======================================= */
+
+        duration: contract.duration || "N/A",
+
+        workLocation:
+          contract.workLocation || "Not specified",
+
+        note: contract.note || "",
+
+        /* =========================================
+        * Raw Backup Data
+        * ======================================= */
+
+        raw: contract,
       };
     });
+    
   }, [contracts]);
 
   // =========================
@@ -321,6 +452,52 @@ export default function ContractListPage() {
         console.warn(`Unhandled action: ${action}`);
     }
   }
+
+  const handleOpenReport = async (contractId: string) => {
+    try {
+      const payload = await getContractProgressReports(contractId);
+      const latestReport = payload.reports?.[0];
+      setReportByContractId((prev) => ({
+        ...prev,
+        [contractId]: {
+          reports: (payload.reports || []).map((report: any) => ({
+            report: report.report,
+            links: Array.isArray(report.links) ? report.links : [],
+            files: Array.isArray(report.files)
+              ? report.files.map((file: any) => ({
+                  fileName: file.fileName,
+                  fileUrl: file.fileUrl,
+                  fileType: file.fileType || file.mimeType || ""
+                }))
+              : [],
+            createdAt: report.createdAt
+          })),
+          hasReport: Boolean(latestReport),
+          workProgress: payload.contract?.workProgress ?? 0
+        }
+      }));
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to load report");
+    }
+  };
+
+  const handleSaveProgress = async (contractId: string, workProgress: number) => {
+    try {
+      await updateContractProgress(contractId, workProgress);
+      toast.success("Contract progress updated");
+      setReportByContractId((prev) => ({
+        ...prev,
+        [contractId]: {
+          ...(prev[contractId] || {}),
+          workProgress
+        }
+      }));
+      await listContracts(currentPage, itemsPerPage, searchQuery || undefined);
+      await refreshStats();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update progress");
+    }
+  };
 
   // =========================
   // Pagination Helpers
@@ -544,42 +721,22 @@ return [
                   />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3  gap-4">
-                  {paginatedApplicants.map((applicant, index) => (
-                  <ContractCard
-                    key={applicant.id}
-                    contract={{
-                      id: applicant.id,
-                      title: applicant.contractTitle,
-                      salaryValue: applicant.salaryPaid ?? "N/A",
-                      currency:applicant.currency,
-                      startDate: applicant.startDate,
-                      endDate: applicant.endDate,
-                      status: applicant.contractStatus,
-                      currentStage:
-                        applicant.contractStatus === "Completed"
-                          ? "completed"
-                          : applicant.contractStatus === "Running"
-                          ? "running"
-                          : applicant.contractStatus === "Disputed"
-                          ? "disputed"
-                          : "evaluation"
-                    }}
-                    hasReport={true}   // 👈 mock for now
-                    report={{
-                      note:
-                        "Student completed initial UI implementation, fixed layout issues, and submitted first version of contract dashboard.",
-                      links: [
-                        { name: "GitHub Repo", url: "https://github.com/example" },
-                        { name: "Figma Design", url: "https://figma.com/example" },
-                      ],
-                      files: [
-                        { name: "final-report.pdf", url: "#" },
-                        { name: "screenshot.png", url: "#" },
-                      ],
-                    }}
-                    // This single line replaces all separate onEdit, onDelete, onDispute props
-                    onAction={(action, id) => handleContractAction(action, id)}
-                  />
+                  {paginatedApplicants.map((contract, index) => (
+                    <ContractCard
+                      key={contract.id}
+                      contract={contract}
+                      hasReport={
+                        Boolean(reportByContractId[contract.id]?.hasReport)
+                      }
+                      reports={
+                        reportByContractId[contract.id]?.reports ?? []
+                      }
+                      reportLoading={reportLoading}
+                      progressSaving={progressSaving}
+                      onOpenReport={handleOpenReport}
+                      onSaveProgress={handleSaveProgress}
+                      onAction={handleContractAction}
+                    />
                   ))}
                 </div>
               )}
@@ -633,9 +790,9 @@ return [
       header: "Name & ID",
       cell: (a: MappedContract) => (
         <div className="flex flex-col">
-          <span>{a.name}</span>
+          <span>{a.studentName}</span>
           <span className="text-xs text-muted-foreground">
-            CO-ID-{a.applicantId}
+            CO-ID-{a.id}
           </span>
         </div>
       ),
@@ -650,7 +807,7 @@ return [
     {
       header: "Paid",
       cell: (a: MappedContract) =>
-        a.salaryPaid ?? "N/A",
+        a.salaryDisplay ?? "N/A",
     },
 
     {

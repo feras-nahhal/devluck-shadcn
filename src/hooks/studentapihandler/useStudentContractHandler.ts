@@ -12,7 +12,7 @@ interface Contract {
   inContractNumber: string
   inContractList: string[]
   currency: string
-  duration: string
+  duration: number
   monthlyAllowance: number
   salary?: number
   workLocation: string
@@ -20,14 +20,17 @@ interface Contract {
   status: string
   companyId: string
   opportunityId?: string
+  workProgress?: number
   company?: {
     id: string
     name: string
     logo?: string
+    logoUrl?: string
     industry?: string
     location?: string
     website?: string
     description?: string
+    phoneNumber?: string
   }
   opportunity?: {
     id: string

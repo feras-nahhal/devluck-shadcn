@@ -7,15 +7,13 @@ export interface MappedContract {
   applicantId: number;
   contractTitle: string;
   company: string;
-  jobType: string;
   location: string;
   workProgress: number;
-  startDate: string;
-  endDate: string;
   status: ContractStatus;
+  durationMonths: number;
   salary: string;
-  startedAt: string;
-  note: string;
+  startDate: string;
+  note?: string;
   opportunity?: {
     id: string;
     title: string;
@@ -29,5 +27,36 @@ export interface MappedContract {
     timeLength?: string;
     currency?: string;
     allowance?: string;
+  };
+}
+
+export interface ContractDescription {
+  id: string;
+  contractTitle: string;
+  name: string;
+  createdDate: string;
+  inContractNumber: string;
+  inContractList: string[];
+  currency: string;
+  duration: number;
+  monthlyAllowance: number;
+  salary?: number;
+  workLocation: string;
+  note?: string;
+  status: string;
+  companyId: string;
+  opportunityId?: string;
+  workProgress?: number;
+
+  company?: {
+    id: string
+    name: string
+    logo?: string
+    logoUrl?: string
+    industry?: string
+    location?: string
+    website?: string
+    description?: string
+    phoneNumber?: string
   };
 }

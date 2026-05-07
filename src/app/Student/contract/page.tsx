@@ -3,17 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useState, useMemo,useEffect } from "react";
 import DashboardLayout from "@/components/Student/DashboardLayout";
-
 import { useStudentContractHandler } from "@/hooks/studentapihandler/useStudentContractHandler";
 import { motion } from "framer-motion";
 import DecryptedText from "@/components/ui/DecryptedText";
 import {FileSearch} from 'lucide-react';
-
 import { EmptyState } from "@/components/common/EmptyState";
 import { SearchAndFilterAndViewBar } from "@/components/common/SearchAndFilterAndViewBar";
 import { Pagination } from "@/components/common/Pagination";
 import { toast } from "sonner";
-import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { ContractStatus, MappedContract } from "@/types/contract-s";
 import { cn } from "@/lib/utils";
@@ -62,49 +59,46 @@ export default function ContractListPage() {
 /* ──────────────────────────────────────────────
   Mapping
 ────────────────────────────────────────────── */
-      const mappedContracts = useMemo(() => {
-        if (!contracts || !Array.isArray(contracts)) {
-          return [];
-        }
-        return contracts.map((contract) => {
-          const statusMap: Record<string, string> = {
-            'running': 'Running',
-            'completed': 'Completed',
-            'dispute': 'Dispute',
-            'cancelled': 'Cancelled'
-          };
-          
-          // Format salary
-          let salaryDisplay = 'Not specified';
-          if (contract.salary !== null && contract.salary !== undefined) {
-            const formattedAmount = typeof contract.monthlyAllowance === 'number' 
-              ? contract.salary.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-              : contract.salary;
-            salaryDisplay = `${contract.currency || ''} ${formattedAmount}`.trim();
-          }
-          
-          // Format started at date
-          const startedAt = contract.createdDate ? new Date(contract.createdDate).toLocaleDateString() : 'Not specified';
-          
-          return {
-            id: contract.id,
-            applicantId: 0,
-            contractTitle: contract.contractTitle,
-            company: contract.company?.name || 'Unknown Company',
-            jobType: contract.duration || 'Not specified',
-            location: contract.workLocation || 'Not specified',
-            workProgress: 0,
-            startDate: contract.createdDate ? new Date(contract.createdDate).toLocaleDateString() : 'Not specified',
-            endDate: contract.duration || 'Not specified',
-            status: toContractStatus(contract.status), // ✅ FIXED
-            salary: salaryDisplay,
-            startedAt: startedAt,
-            // ✅ FIXED: required field
-            note: contract.note ?? "No note available",
+    const mappedContracts = useMemo(() => {
+      if (!contracts || !Array.isArray(contracts)) return [];
 
-          };
-        });
-      }, [contracts]);
+      return contracts.map((contract) => {
+
+        const amount =
+          contract.salary ??
+          contract.monthlyAllowance ??
+          0;
+
+        const salaryDisplay = contract.currency
+          ? `${contract.currency} ${amount.toLocaleString("en-US")}`
+          : `${amount.toLocaleString("en-US")}`;
+
+        return {
+          id: contract.id,
+          applicantId: 0,
+
+          contractTitle: contract.contractTitle,
+
+          company: contract.company?.name || "Unknown Company",
+
+          location: contract.workLocation || "Not specified",
+
+          workProgress: contract.workProgress ?? 0,
+
+          startDate: contract.createdDate
+            ? new Date(contract.createdDate).toLocaleDateString()
+            : "Not specified",
+
+          status: toContractStatus(contract.status),
+
+          salary: salaryDisplay,
+
+          durationMonths: contract.duration ?? 0,
+
+          note: contract.note ?? undefined,
+        };
+      });
+    }, [contracts]);
 
 /* ──────────────────────────────────────────────
   Effects
@@ -115,26 +109,27 @@ export default function ContractListPage() {
 /* ──────────────────────────────────────────────
      Filtering
 ────────────────────────────────────────────── */
-      const filteredApplicants = useMemo(() => {
-        return mappedContracts.filter(contract => {
-          // Search filter
-          const searchMatch =
-            !searchQuery.trim() ||
-            contract.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            contract.jobType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            contract.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            contract.contractTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            contract.startDate.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            contract.endDate.toLowerCase().includes(searchQuery.toLowerCase());
-  
-          // Contract status filter
-          const contractMatch =
-            selectedContractStatus.length === 0 || // empty = no filter
-            selectedContractStatus.includes(contract.status as "Running" | "Completed"|"Disputed");
-  
-          return searchMatch && contractMatch;
-        });
-      }, [mappedContracts, searchQuery, selectedContractStatus]);
+  const filteredApplicants = useMemo(() => {
+    return mappedContracts.filter((contract) => {
+      
+      // Search filter
+      const searchMatch =
+        !searchQuery.trim() ||
+        contract.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        contract.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        contract.contractTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        contract.startDate.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Contract status filter
+      const contractMatch =
+        selectedContractStatus.length === 0 ||
+        selectedContractStatus.includes(
+          contract.status as "Running" | "Completed" | "Disputed"
+        );
+
+      return searchMatch && contractMatch;
+    });
+  }, [mappedContracts, searchQuery, selectedContractStatus]);
 /* ──────────────────────────────────────────────
      Pagination
 ────────────────────────────────────────────── */
@@ -202,7 +197,7 @@ export default function ContractListPage() {
         },
         {
           header: "Started",
-          cell: (row: MappedContract) => row.startedAt,
+          cell: (row: MappedContract) => row.startDate,
         },
         {
           header: "Salary",
